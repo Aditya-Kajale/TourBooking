@@ -29,13 +29,31 @@ export function AddTour() {
 
   const categories = ['Adventure', 'Culture', 'Food', 'Relaxation'];
 
-  // ✅ Image handler
+  // ✅ Image handler (Converts to JPEG automatically)
   const handleImageChange = (e: any) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    setImageFile(file);
-    setImagePreview(URL.createObjectURL(file));
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(img, 0, 0);
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const newFile = new File([blob], file.name.replace(/\.[^/.]+$/, ".jpg"), { type: 'image/jpeg' });
+            setImageFile(newFile);
+            setImagePreview(URL.createObjectURL(newFile));
+          }
+        }, 'image/jpeg', 0.9);
+      }
+      URL.revokeObjectURL(url);
+    };
+    img.src = url;
   };
 
   const handleRemoveImage = () => {

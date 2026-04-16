@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 // ✅ Import the API helper
 import { getTour, deleteTour } from "../../api/tours";
-// Keep reviews/guides if they aren't part of the nested tour response yet
+import { SeatBadge } from '../components/SeatBadge';
 
 export function TourDetail() {
   const { id } = useParams();
@@ -152,9 +152,17 @@ export function TourDetail() {
                 </div>
               </div>
               <h1 className="text-4xl md:text-6xl font-black text-white tracking-tighter mb-4 leading-tight drop-shadow-2xl">{tour.title}</h1>
-              <div className="flex items-center gap-2 text-white/90 text-lg font-medium drop-shadow-md">
-                <MapPin className="h-5 w-5 text-accent" />
-                <span>{tour.location}</span>
+              <div className="flex flex-wrap items-center gap-4 text-white/90 text-lg font-medium drop-shadow-md">
+                <div className="flex items-center gap-2 bg-white/20 px-3 py-1.5 rounded-full backdrop-blur-md border border-white/10 shadow-sm">
+                  <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-xs font-bold shadow-sm">
+                    {(tour.created_by_name || 'H').toString().charAt(0).toUpperCase()}
+                  </div>
+                  <span className="text-sm font-bold text-white">Hosted by {tour.created_by_name || "Guide"}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-5 w-5 text-accent" />
+                  <span>{tour.location}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -173,7 +181,6 @@ export function TourDetail() {
                { icon: Calendar, label: 'Date', val: new Date(tour.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) },
                { icon: Clock, label: 'Duration', val: tour.duration || "Full Day" },
                { icon: Users, label: 'Group Size', val: `Max ${tour.max_people || 10}` },
-               { icon: Star, label: 'Reviews', val: '128+ ratings' },
             ].map((stat, i) => (
               <div key={i} className="bg-card border border-border/50 rounded-3xl p-6 shadow-sm hover:shadow-md transition-shadow group">
                 <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
@@ -183,6 +190,19 @@ export function TourDetail() {
                 <p className="text-lg font-bold text-foreground">{stat.val}</p>
               </div>
             ))}
+            {/* Seats card */}
+            <div className="bg-card border border-border/50 rounded-3xl p-6 shadow-sm hover:shadow-md transition-shadow group">
+              <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                <Users className="h-6 w-6 text-primary" />
+              </div>
+              <p className="text-xs font-black uppercase tracking-widest text-muted-foreground/60 mb-2">Seats</p>
+              <SeatBadge
+                max_people={tour.max_people || 10}
+                bookings_count={tour.bookings_count || 0}
+                is_housefull={tour.is_housefull}
+                size="md"
+              />
+            </div>
           </div>
 
           {/* Description */}
@@ -224,26 +244,27 @@ export function TourDetail() {
           )}
 
           {/* Guide Preview */}
-          {guide && (
-            <section className="bg-secondary/40 border border-border/50 rounded-[3rem] p-10 flex flex-col md:flex-row gap-8 items-center md:items-start">
-               <div className="relative shrink-0">
-                  <img src={guide.avatar} alt={guide.name} className="w-32 h-32 rounded-[2rem] object-cover shadow-2xl ring-4 ring-white/50" />
-                  <div className="absolute -bottom-2 -right-2 bg-primary text-white p-2 rounded-xl shadow-lg">
-                    <Check className="w-5 h-5" />
-                  </div>
-               </div>
-               <div className="text-center md:text-left">
-                  <p className="text-sm font-black uppercase tracking-widest text-primary mb-1">Your Guide</p>
-                  <h3 className="text-3xl font-black mb-3">{guide.name}</h3>
-                  <div className="flex flex-wrap justify-center md:justify-start gap-4 text-sm font-bold text-muted-foreground mb-6">
-                    <span className="flex items-center gap-1.5"><Star className="h-4 w-4 text-accent fill-accent" /> {guide.rating} Rating</span>
-                    <span className="flex items-center gap-1.5">•</span>
-                    <span>{guide.experience}+ years experience</span>
-                  </div>
-                  <p className="text-lg text-muted-foreground leading-relaxed font-medium italic">"{guide.bio}"</p>
-               </div>
-            </section>
-          )}
+          <section className="bg-secondary/40 border border-border/50 rounded-[3rem] p-10 flex flex-col md:flex-row gap-8 items-center md:items-start">
+             <div className="relative shrink-0">
+                <div className="w-32 h-32 rounded-[2rem] bg-primary flex items-center justify-center shadow-2xl ring-4 ring-white/50 pb-2">
+                  <span className="text-6xl font-bold text-white">{(tour.created_by_name || 'G').toString().charAt(0).toUpperCase()}</span>
+                </div>
+                <div className="absolute -bottom-2 -right-2 bg-primary text-white p-2 rounded-xl shadow-lg">
+                  <Check className="w-5 h-5" />
+                </div>
+             </div>
+             <div className="text-center md:text-left">
+                <p className="text-sm font-black uppercase tracking-widest text-primary mb-1">Your Host & Guide</p>
+                <h3 className="text-3xl font-black mb-3">{tour.created_by_name || `Guide #${String(tour.created_by).slice(0, 6)}`}</h3>
+                <div className="flex flex-wrap justify-center md:justify-start gap-4 text-sm font-bold text-muted-foreground mb-6">
+                  <span className="flex items-center gap-1.5"><Star className="w-4 h-4 fill-accent text-accent"/> 4.8 Rating</span>
+                  <span className="flex items-center gap-1.5"><MapPin className="w-4 h-4"/> Local Expert</span>
+                </div>
+                <p className="text-lg text-foreground font-medium leading-relaxed max-w-2xl">
+                  {`Passionate local host excited to share the best experiences with you. Let's make some amazing memories!`}
+                </p>
+             </div>
+          </section>
         </div>
 
         {/* Right Side: Sticky Checkout / Pricing (4 cols) */}

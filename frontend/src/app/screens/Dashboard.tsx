@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Calendar, DollarSign, Users, TrendingUp, MapPin, Clock, Trash2 } from 'lucide-react';
-
 import { useNavigate } from 'react-router-dom';
 import { getTours, deleteTour } from "../../api/tours";
 import { apiFetch } from "../../api/client";
+import { SeatBadge } from '../components/SeatBadge';
 
 export function Dashboard() {
   const navigate = useNavigate();
@@ -62,17 +62,11 @@ export function Dashboard() {
   // ✅ Filter tours
   const todayStr = new Date().toISOString().split('T')[0];
 
-  const myCreatedTours = tours.filter((tour) => currentUser && tour.created_by === currentUser.id);
-  const myBookedBookings = bookings.filter((b: any) => currentUser && b.user === currentUser.id);
-  const bookedTourIds = myBookedBookings.map((b: any) => b.tour);
-  const myBookedTours = tours.filter((tour) => bookedTourIds.includes(tour.id));
+  // Only consider tours created by the logged-in user
+  const myCreatedTours = tours.filter((tour) => currentUser && String(tour.created_by) === String(currentUser.id));
 
-  // Deduplicate and filter for upcoming
-  const myRelevantTours = [...myCreatedTours, ...myBookedTours]
-    .filter((tour, index, self) => self.findIndex(t => t.id === tour.id) === index)
-    .filter((tour) => tour.date >= todayStr);
-
-  const myBookings = myBookedBookings;
+  // Filter for upcoming hosted tours
+  const myRelevantTours = myCreatedTours.filter((tour) => tour.date >= todayStr);
 
   const totalRevenue = 0;
   const monthlyRevenue = 0;
@@ -88,7 +82,7 @@ export function Dashboard() {
             <h1 className="mb-2 text-4xl font-bold text-primary-foreground tracking-tight">Guide Dashboard</h1>
             <p className="text-primary-foreground/80 text-lg">Manage your tours and track performance.</p>
           </div>
-          <button 
+          <button
             onClick={() => navigate('/add-tour')}
             className="bg-accent text-accent-foreground px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all"
           >
@@ -99,7 +93,7 @@ export function Dashboard() {
 
       {/* Main Content Area */}
       <div className="max-w-6xl mx-auto px-8 -mt-12 relative z-20 pb-24">
-        
+
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
           <div className="bg-card shadow-sm border border-border/50 p-6 rounded-2xl hover:border-primary/30 transition-colors">
@@ -139,23 +133,22 @@ export function Dashboard() {
 
         {/* Workspace Area */}
         <div className="flex flex-col lg:flex-row gap-8">
-          
+
           {/* Main List */}
           <div className="flex-1">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-foreground">Your Schedule</h2>
-              
+
               {/* Tabs */}
               <div className="flex gap-2 bg-secondary p-1 rounded-xl">
                 {['upcoming', 'bookings', 'revenue'].map((tab) => (
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab as any)}
-                    className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all capitalize ${
-                      activeTab === tab 
-                        ? 'bg-card text-foreground shadow-sm' 
+                    className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all capitalize ${activeTab === tab
+                        ? 'bg-card text-foreground shadow-sm'
                         : 'text-secondary-foreground hover:text-primary'
-                    }`}
+                      }`}
                   >
                     {tab}
                   </button>
@@ -171,8 +164,7 @@ export function Dashboard() {
                   </div>
                 ) : (
                   myRelevantTours.map((tour) => {
-                    const isCreated = currentUser && tour.created_by === currentUser.id;
-                    const isBooked = bookedTourIds.includes(tour.id);
+                    const isCreated = true; // All mapped tours are now hosted tours by definition
                     return (
                       <div
                         key={tour.id}
@@ -189,16 +181,9 @@ export function Dashboard() {
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                             alt={tour.title}
                           />
-                          {isCreated && (
-                            <div className="absolute top-2 left-2 bg-primary/90 text-primary-foreground text-[10px] uppercase font-bold tracking-wider px-2 py-1 rounded backdrop-blur-sm">
-                              Host
-                            </div>
-                          )}
-                          {isBooked && !isCreated && (
-                            <div className="absolute top-2 left-2 bg-emerald-500/90 text-white text-[10px] uppercase font-bold tracking-wider px-2 py-1 rounded backdrop-blur-sm">
-                              Guest
-                            </div>
-                          )}
+                          <div className="absolute top-2 left-2 bg-primary/90 text-primary-foreground text-[10px] uppercase font-bold tracking-wider px-2 py-1 rounded backdrop-blur-sm">
+                            Host
+                          </div>
                         </div>
 
                         <div className="flex-1 min-w-0 py-1">
@@ -214,13 +199,18 @@ export function Dashboard() {
                           </div>
 
                           <div className="flex items-center justify-between mt-auto">
-                            <div className="flex gap-4">
+                            <div className="flex items-center gap-3 flex-wrap">
                               <span className="flex items-center gap-1.5 text-xs font-semibold bg-secondary text-secondary-foreground px-2 py-1 rounded-md">
                                 <Clock size={14} /> {tour.duration || "Full Day"}
                               </span>
                               <span className="flex items-center gap-1.5 text-xs font-semibold bg-secondary text-secondary-foreground px-2 py-1 rounded-md">
                                 <Users size={14} /> Max {tour.max_people}
                               </span>
+                              <SeatBadge
+                                max_people={tour.max_people}
+                                bookings_count={tour.bookings_count}
+                                is_housefull={tour.is_housefull}
+                              />
                             </div>
 
                             {isCreated && (
@@ -240,14 +230,14 @@ export function Dashboard() {
                 )}
               </div>
             )}
-            
+
             {activeTab === 'bookings' && (
               <div className="bg-card border border-border/50 rounded-2xl p-8 text-center text-muted-foreground">
                 <Users className="mx-auto h-12 w-12 text-muted-foreground/30 mb-4" />
                 <p>Booking management features coming soon.</p>
               </div>
             )}
-            
+
             {activeTab === 'revenue' && (
               <div className="bg-card border border-border/50 rounded-2xl p-8 text-center text-muted-foreground">
                 <TrendingUp className="mx-auto h-12 w-12 text-muted-foreground/30 mb-4" />
@@ -256,7 +246,7 @@ export function Dashboard() {
             )}
 
           </div>
-          
+
           {/* Side Panel */}
           <div className="w-full lg:w-80 space-y-6">
             <div className="bg-card border border-border/50 rounded-2xl p-6">
@@ -273,7 +263,7 @@ export function Dashboard() {
                 </button>
               </div>
             </div>
-            
+
             <div className="bg-primary/5 border border-primary/10 rounded-2xl p-6">
               <h3 className="font-bold text-lg mb-2 text-primary">Pro Tip</h3>
               <p className="text-sm text-secondary-foreground leading-relaxed">

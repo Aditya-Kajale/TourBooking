@@ -1,24 +1,27 @@
 import { useEffect, useState } from 'react';
-import { Search, MapPin, Calendar as CalendarIcon, Filter, Star, Heart } from 'lucide-react';
+import { Search, MapPin, Calendar as CalendarIcon, CheckCircle, Star } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getTours } from "../../api/tours";
+import { SeatBadge } from '../components/SeatBadge';
 
 export function Home() {
   const navigate = useNavigate();
 
   const [tours, setTours] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [bookedTours, setBookedTours] = useState<string[]>([]);
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchDate, setSearchDate] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
-  const [showFilters, setShowFilters] = useState(false);
 
   const [filters, setFilters] = useState({
-    maxPrice: 500000, // Increased so default tours are not hidden
-    maxGroupSize: 100, // Increased so default tours are not hidden
+    maxPrice: 500000,
+    maxGroupSize: 100,
   });
 
-  // ✅ Fetch tours
+  // ✅ Fetch tours and bookings
   useEffect(() => {
     const fetchTours = async () => {
       try {
@@ -32,6 +35,16 @@ export function Home() {
     };
 
     fetchTours();
+
+    // Check localStorage for mocked booked tours
+    const localBookings = JSON.parse(localStorage.getItem('booked_tours') || '[]');
+    setBookedTours(localBookings.map((t: any) => t.id));
+
+    // Load current user
+    try {
+      const raw = localStorage.getItem('user');
+      if (raw) setCurrentUser(JSON.parse(raw));
+    } catch {}
   }, []);
 
   const categories = ['All', 'Adventure', 'Culture', 'Food', 'Relaxation'];
@@ -43,8 +56,9 @@ export function Home() {
     const isUpcoming = tour.date >= todayStr;
 
     const matchesSearch =
-      tour.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      tour.location?.toLowerCase().includes(searchQuery.toLowerCase());
+      !searchQuery ||
+      (tour.title?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
+      (tour.location?.toLowerCase() || "").includes(searchQuery.toLowerCase());
 
     const matchesCategory =
       selectedCategory === 'All' ||
@@ -54,194 +68,214 @@ export function Home() {
 
     const matchesGroupSize =
       !tour.max_people || tour.max_people <= filters.maxGroupSize;
+      
+    const matchesDate = !searchDate || (tour.date && tour.date.startsWith(searchDate));
 
-    return isUpcoming && matchesSearch && matchesCategory && matchesPrice && matchesGroupSize;
+    // Hide tours created by the current user — they are not a customer of their own tours
+    const isOwnTour = currentUser && String(tour.created_by) === String(currentUser.id);
+
+    return isUpcoming && !isOwnTour && matchesSearch && matchesCategory && matchesPrice && matchesGroupSize && matchesDate;
   });
 
   return (
-    <div className="min-h-screen bg-background pb-24">
-      
-      {/* Hero Section */}
-      <div className="relative pt-32 pb-44 px-8 overflow-hidden bg-primary">
-        {/* Decorative background elements */}
-        <div className="absolute top-0 left-0 w-full h-[120%] bg-primary-foreground/5 -skew-y-3 origin-top-left -z-10 shadow-xl" />
-        <div className="absolute top-0 right-0 w-1/2 h-[120%] bg-black/20 skew-y-6 origin-top-right -z-10 mix-blend-multiply opacity-50" />
+    <div className="min-h-screen bg-background pt-8 pb-24 px-4 md:px-8">
+      <div className="max-w-[1200px] mx-auto flex flex-col md:flex-row justify-center gap-6 md:gap-8 items-start">
         
-        <div className="max-w-6xl mx-auto relative z-10 text-center">
-          <h1 className="text-5xl md:text-7xl font-extrabold text-primary-foreground mb-8 tracking-tighter drop-shadow-sm">
-            Discover Your Next <span className="text-accent underline decoration-8 underline-offset-[12px]">Adventure</span>
-          </h1>
-          <p className="text-xl md:text-2xl text-primary-foreground/95 max-w-2xl mx-auto mb-12 font-medium drop-shadow-sm">
-            Explore curated tours from local experts. From mountain treks to culinary walks, find the perfect experience.
-          </p>
-          
-          {/* Enhanced Search */}
-          <div className="bg-card w-full max-w-4xl mx-auto rounded-3xl md:rounded-full p-3 flex flex-col md:flex-row items-center gap-2 shadow-2xl border border-white/10 ring-1 ring-black/5">
-            <div className="w-full md:w-auto flex-[1.5] flex items-center gap-3 px-6 py-4 md:py-2">
-              <Search className="h-6 w-6 text-primary" />
+        {/* Left Sidebar (Search & Navigation) */}
+        <div className="w-full md:w-72 flex-shrink-0 sticky top-24 space-y-4">
+          <div className="bg-card rounded-2xl p-5 border border-border shadow-sm flex flex-col gap-4">
+            <h2 className="text-xl font-extrabold text-foreground flex items-center gap-2">
+               Discover Tours
+            </h2>
+            
+            {/* Search Input */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <input
                 type="text"
-                placeholder="Where do you want to go?"
+                placeholder="Search places or names..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-transparent outline-none text-xl text-foreground placeholder:text-muted-foreground font-semibold"
+                className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-border/60 bg-muted/30 focus:bg-background focus:ring-2 focus:ring-primary/20 outline-none text-sm font-medium transition-all"
               />
             </div>
-            <div className="hidden md:block w-px h-10 bg-border/50"></div>
-            <div className="w-full md:w-auto flex-1 flex items-center gap-3 px-6 py-4 md:py-2">
-              <CalendarIcon className="h-6 w-6 text-primary" />
+
+            {/* Date Input */}
+            <div className="relative">
               <input
-                type="text"
-                placeholder="Any dates"
-                className="w-full bg-transparent outline-none text-xl text-foreground placeholder:text-muted-foreground font-semibold cursor-not-allowed opacity-50"
-                disabled
+                type="date"
+                value={searchDate}
+                onChange={(e) => setSearchDate(e.target.value)}
+                className="w-full px-3 py-2.5 rounded-xl border border-border/60 bg-muted/30 focus:bg-background focus:ring-2 focus:ring-primary/20 outline-none text-sm font-medium text-foreground transition-all"
               />
             </div>
-            <button className="w-full md:w-auto bg-accent text-accent-foreground px-10 py-5 rounded-2xl md:rounded-full font-bold text-xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-accent/20">
-              Explore
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Content Area */}
-      <div className="max-w-6xl mx-auto px-8 relative z-20 mt-12">
-        
-        {/* Header & Categories */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
-          <div>
-            <h2 className="text-3xl font-bold text-foreground">Featured Experiences</h2>
-            <p className="text-muted-foreground text-lg mt-1">Handpicked tours starting soon</p>
-          </div>
-          
-          {/* Categories */}
-          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none snap-x">
-            {categories.map((category) => (
-              <button
-                key={category}
-                onClick={() => setSelectedCategory(category)}
-                className={`px-6 py-3 rounded-full text-sm font-bold whitespace-nowrap transition-all shadow-sm snap-start ${
-                  selectedCategory === category
-                    ? 'bg-primary text-primary-foreground ring-2 ring-primary ring-offset-2'
-                    : 'bg-card text-foreground border border-border hover:border-primary/50'
-                }`}
-              >
-                {category}
-              </button>
-            ))}
-            <button className="px-5 py-3 rounded-full text-sm font-bold border border-border bg-card hover:bg-muted text-foreground flex items-center gap-2 transition-all">
-              <Filter size={16} /> Filters
-            </button>
-          </div>
-        </div>
-
-
-        {/* ✅ Loading */}
-        {loading && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {[1,2,3].map(i => (
-              <div key={i} className="animate-pulse bg-card rounded-3xl h-96 border border-border"></div>
-            ))}
-          </div>
-        )}
-
-        {/* ❌ Empty state */}
-        {!loading && filteredTours.length === 0 && (
-          <div className="bg-card border border-border/50 rounded-3xl p-16 text-center shadow-sm">
-            <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mx-auto mb-6">
-              <Search className="h-10 w-10 text-muted-foreground" />
+            
+            {/* Categories Menu */}
+            <div className="pt-2 border-t border-border/50">
+               <h3 className="text-sm font-bold text-muted-foreground mb-3 uppercase tracking-wider">Categories</h3>
+               <div className="flex flex-col gap-1">
+                 {categories.map((category) => (
+                   <button
+                     key={category}
+                     onClick={() => setSelectedCategory(category)}
+                     className={`text-left px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${
+                       selectedCategory === category
+                         ? 'bg-primary/10 text-primary'
+                         : 'text-foreground hover:bg-muted/50'
+                     }`}
+                   >
+                     {category}
+                   </button>
+                 ))}
+               </div>
             </div>
-            <h3 className="text-2xl font-bold text-foreground mb-2">No tours found</h3>
-            <p className="text-muted-foreground text-lg max-w-md mx-auto">
-              We couldn't find any upcoming tours matching your criteria. Try adjusting your search or filters.
-            </p>
-            <button 
-              onClick={() => {setSearchQuery(''); setSelectedCategory('All');}}
-              className="mt-8 text-primary font-bold hover:underline"
-            >
-              Clear all filters
-            </button>
-          </div>
-        )}
 
-        {/* ✅ Tours Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {filteredTours.map((tour) => (
-            <div
-              key={tour.id}
-              onClick={() => navigate(`/tour/${tour.id}`)}
-              className="bg-card rounded-3xl overflow-hidden border border-border hover:border-primary/40 shadow-sm hover:shadow-xl cursor-pointer group flex flex-col transition-all duration-300"
-            >
-              {/* Image */}
-              <div className="h-64 bg-muted relative overflow-hidden">
-                <img
-                  src={
-                    tour.image
-                      ? (tour.image.startsWith('http') ? tour.image : `http://127.0.0.1:8000${tour.image}`)
-                      : `https://source.unsplash.com/featured/?${tour.location}`
-                  }
-                  alt={tour.title}
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-in-out"
-                />
-                
-                {/* Overlay gradients for better text legibility */}
-                <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/60 to-transparent"></div>
-                
-                {/* Category Badge */}
-                {tour.category && (
-                  <div className="absolute top-4 left-4 bg-background/90 backdrop-blur-md text-foreground px-3 py-1.5 rounded-lg text-xs font-bold tracking-wide uppercase shadow-lg">
-                    {tour.category}
-                  </div>
-                )}
-                
-                {/* Heart Button */}
-                <button className="absolute top-4 right-4 w-10 h-10 bg-background/90 backdrop-blur-md rounded-full flex items-center justify-center text-muted-foreground hover:text-destructive transition-colors shadow-lg">
-                  <Heart size={18} />
-                </button>
-
-                {/* Price tag on image */}
-                <div className="absolute bottom-4 left-4 text-white">
-                  <div className="font-bold text-3xl drop-shadow-md flex items-baseline gap-1">
-                    <span className="text-xl">$</span>{tour.price}
-                  </div>
-                  <div className="text-white/80 text-sm font-medium drop-shadow-sm">per person</div>
-                </div>
+            {/* Decorative Nature Image (Requested by user) */}
+            <div className="mt-4 rounded-xl overflow-hidden border border-border/50 shadow-sm relative group">
+              <img src="/images/nature-sidebar.jpg" onError={(e) => { e.currentTarget.src = 'https://source.unsplash.com/featured/?forest,nature,path'; }} alt="Nature Inspiration" className="w-full h-32 object-cover group-hover:scale-105 transition-transform duration-700" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end p-3">
+                <span className="text-white text-xs font-bold leading-tight">Find your path in nature.</span>
               </div>
+            </div>
+          </div>
+        </div>
 
-              {/* Content */}
-              <div className="p-6 flex flex-col flex-1">
-                <div className="flex justify-between items-start mb-2 gap-4">
-                  <h3 className="text-xl font-bold text-foreground leading-tight group-hover:text-primary transition-colors line-clamp-2">{tour.title}</h3>
-                  <div className="flex items-center gap-1 bg-accent/10 px-2 py-1 rounded-md shrink-0">
-                    <Star className="w-4 h-4 text-accent fill-accent" />
-                    <span className="font-bold text-sm">4.8</span>
+        {/* Main Feed Column */}
+        <div className="flex-1 max-w-2xl w-full">
+          
+          {/* Create Post / Upcoming Text Header */}
+          <div className="mb-6 flex items-center justify-between">
+            <h1 className="text-2xl font-bold text-foreground">Upcoming Tours Feed</h1>
+          </div>
+
+          {loading && (
+            <div className="space-y-6">
+              {[1,2,3].map(i => (
+                <div key={i} className="animate-pulse bg-card rounded-2xl h-80 border border-border"></div>
+              ))}
+            </div>
+          )}
+
+          {!loading && filteredTours.length === 0 && (
+            <div className="bg-card border border-border/50 rounded-2xl p-12 text-center shadow-sm">
+              <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                <Search className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <h3 className="text-xl font-bold text-foreground mb-2">No tours found</h3>
+              <p className="text-muted-foreground text-sm max-w-sm mx-auto">
+                Try adjusting your search keywords, clearing the date, or selecting a different category.
+              </p>
+              <button 
+                onClick={() => {setSearchQuery(''); setSelectedCategory('All'); setSearchDate('');}}
+                className="mt-6 text-primary text-sm font-bold hover:underline"
+              >
+                Clear all filters
+              </button>
+            </div>
+          )}
+
+          <div className="space-y-6">
+            {filteredTours.map((tour) => (
+              <div
+                key={tour.id}
+                onClick={() => navigate(`/tour/${tour.id}`)}
+                className="bg-card rounded-2xl border border-border overflow-hidden shadow-sm hover:shadow-md cursor-pointer transition-shadow"
+              >
+                {/* Post Header — Tour Creator Info */}
+                <div className="p-4 flex items-center gap-3">
+                  {/* Creator avatar: initials of creator's username */}
+                  <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold shrink-0 shadow-sm text-sm">
+                    {(tour.created_by_name || tour.created_by || 'G').toString().charAt(0).toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-foreground text-sm leading-tight">
+                      {tour.created_by_name || `Guide #${String(tour.created_by).slice(0, 6)}`}
+                    </p>
+                    <p className="text-xs text-muted-foreground font-medium mt-0.5">
+                      {new Date(tour.date).toLocaleDateString(undefined, {month: 'long', day: 'numeric', year: 'numeric'})} · {tour.location}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1.5 bg-accent/10 px-2.5 py-1 rounded-full text-xs font-bold text-accent shrink-0">
+                    <Star className="w-3.5 h-3.5 fill-accent" />
+                    <span>4.8</span>
                   </div>
                 </div>
 
-                <p className="text-muted-foreground text-sm line-clamp-2 mb-6">
-                  {tour.description || "Experience the best of " + tour.location + " with a local expert guiding you through hidden gems and popular spots."}
-                </p>
+                {/* Post Description + Tour Title */}
+                <div className="px-4 pb-3">
+                  <h3 className="font-bold text-foreground text-base mb-1 leading-snug">{tour.title}</h3>
+                  <p className="text-muted-foreground text-sm leading-relaxed">
+                    {tour.description || "Join us to explore the beautiful sites around " + tour.location + ". It's going to be an unforgettable adventure!"}
+                  </p>
+                </div>
 
-                <div className="mt-auto grid grid-cols-2 gap-y-3 gap-x-2 pt-4 border-t border-border/50">
-                  <div className="flex items-center gap-2 text-sm text-secondary-foreground font-medium">
-                    <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center shrink-0">
-                      <MapPin className="h-4 w-4 text-primary" />
+                {/* Post Image */}
+                <div className="bg-muted relative">
+                  <img
+                    src={
+                      tour.image
+                        ? (tour.image.startsWith('http') ? tour.image : `http://127.0.0.1:8000${tour.image}`)
+                        : `https://source.unsplash.com/featured/?${tour.location}`
+                    }
+                    alt={tour.title}
+                    className="w-full h-[400px] object-cover"
+                  />
+                  
+                  <div className="absolute bottom-4 left-4 bg-background/90 backdrop-blur-md px-3 py-1.5 rounded-xl shadow-lg border border-border/50">
+                    <div className="font-bold text-lg text-foreground flex items-baseline gap-1">
+                      ${tour.price} <span className="text-xs text-muted-foreground font-normal">/ person</span>
                     </div>
-                    <span className="truncate">{tour.location}</span>
+                  </div>
+                </div>
+
+                {/* Post Footer */}
+                <div className="px-4 py-3 flex items-center justify-between border-t border-border/50 bg-card/50">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium">
+                    <MapPin className="w-3.5 h-3.5 text-primary" />
+                    <span>{tour.location}</span>
                   </div>
                   
-                  <div className="flex items-center gap-2 text-sm text-secondary-foreground font-medium">
-                    <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center shrink-0">
-                      <CalendarIcon className="h-4 w-4 text-primary" />
-                    </div>
-                    <span className="truncate">{new Date(tour.date).toLocaleDateString(undefined, {month: 'short', day: 'numeric'})}</span>
+                  <div className="flex items-center gap-2">
+                    {bookedTours.includes(tour.id) && (
+                      <div className="flex items-center gap-1.5 text-emerald-600 font-bold text-xs bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200">
+                        <CheckCircle className="w-3.5 h-3.5" /> Booked
+                      </div>
+                    )}
+                    <SeatBadge
+                      max_people={tour.max_people}
+                      bookings_count={tour.bookings_count}
+                      is_housefull={tour.is_housefull}
+                    />
+                    {tour.category && (
+                      <div className="bg-muted px-2.5 py-1 rounded-full text-xs font-bold text-muted-foreground">
+                        {tour.category}
+                      </div>
+                    )}
                   </div>
                 </div>
-                
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
+        
+        {/* Right Sidebar (Trending/Suggested) */}
+        <div className="hidden xl:block w-72 sticky top-24">
+           <div className="bg-card rounded-2xl p-5 border border-border shadow-sm">
+              <h3 className="font-bold text-foreground mb-1">Trending Locations</h3>
+              <p className="text-xs text-muted-foreground mb-4">Popular destinations this month</p>
+              <div className="space-y-3">
+                {['Bali, Indonesia', 'Kyoto, Japan', 'Swiss Alps', 'Santorini, Greece'].map(dest => (
+                  <div key={dest} className="flex items-center gap-3 group cursor-pointer">
+                    <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                       <MapPin className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                    </div>
+                    <div className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">{dest}</div>
+                  </div>
+                ))}
+              </div>
+           </div>
+        </div>
+
       </div>
     </div>
   );

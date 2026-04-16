@@ -43,6 +43,14 @@ export const apiFetch = async (url: string, options: any = {}) => {
     }
   }
 
+  // Also include the DRF Authentication Token if available
+  if (typeof localStorage !== 'undefined') {
+    const apiToken = localStorage.getItem('token');
+    if (apiToken) {
+      headers['Authorization'] = `Token ${apiToken}`;
+    }
+  }
+
   const res = await fetch(`${API_BASE}${url}`, {
     credentials: 'include',
     headers: { ...headers, ...(options.headers || {}) },

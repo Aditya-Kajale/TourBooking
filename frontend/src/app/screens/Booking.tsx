@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, CreditCard, Smartphone, Check } from 'lucide-react';
+import { ArrowLeft, CreditCard, Smartphone, Check, Loader2, Users } from 'lucide-react';
 import { toast } from 'sonner';
+import { getTour } from '../../api/tours';
+import { apiFetch } from '../../api/client';
 
 export function Booking() {
   const { id } = useParams();
@@ -9,27 +11,63 @@ export function Booking() {
   const [step, setStep] = useState<'payment' | 'success'>('payment');
   const [paymentMethod, setPaymentMethod] = useState<'upi' | 'card'>('upi');
   const [participants, setParticipants] = useState(1);
+  const [tour, setTour] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-  const tours: any[] = (typeof window !== 'undefined' && (window as any).TOURS) || [];
-  const tour = tours.find((t) => String(t.id) === String(id));
+  useEffect(() => {
+    if (!id) return;
+    getTour(id)
+      .then((data) => { setTour(data); setLoading(false); })
+      .catch(() => { setLoading(false); });
+  }, [id]);
 
-  if (!tour) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p className="text-muted-foreground">Tour not found</p>
+        <Loader2 className="h-10 w-10 text-primary animate-spin" />
       </div>
     );
   }
+
+  if (!tour) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 px-6 text-center">
+        <p className="text-xl font-semibold text-foreground">Tour not found</p>
+        <button onClick={() => navigate('/')} className="px-6 py-2 bg-primary text-primary-foreground rounded-full font-semibold">Back to Home</button>
+      </div>
+    );
+  }
+
+  // Housefull check
+  const slotsLeft = Math.max(0, (tour.max_people || 10) - (tour.bookings_count || 0));
+  const isHousefull = tour.is_housefull || slotsLeft === 0;
 
   const subtotal = tour.price * participants;
   const serviceFee = Math.round(subtotal * 0.1);
   const total = subtotal + serviceFee;
 
-  const handlePayment = () => {
+  const handlePayment = async () => {
     toast.success('Processing payment...');
-    setTimeout(() => {
+    try {
+      await apiFetch('/api/bookings/', {
+        method: 'POST',
+        body: JSON.stringify({
+          tour: tour.id,
+          participants,
+          date: tour.date,
+          total_price: total
+        })
+      });
+      
+      const bookedTours = JSON.parse(localStorage.getItem('booked_tours') || '[]');
+      if (!bookedTours.find((t: any) => t.id === tour.id)) {
+        bookedTours.push(tour);
+        localStorage.setItem('booked_tours', JSON.stringify(bookedTours));
+      }
       setStep('success');
-    }, 1500);
+    } catch (err: any) {
+      toast.error(err.message || 'Payment failed. Please try again.');
+    }
   };
 
   if (step === 'success') {
@@ -74,13 +112,31 @@ export function Booking() {
               Back to Home
             </button>
             <button
-              onClick={() => navigate('/dashboard')}
+              onClick={() => navigate('/profile')}
               className="w-full bg-card border border-border/50 text-foreground py-4 rounded-full hover:bg-muted/50 transition-colors font-semibold text-lg"
             >
-              View My Bookings
+              View My Adventures
             </button>
           </div>
         </div>
+      </div>
+    );
+  }
+
+  // Housefull screen
+  if (isHousefull) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-6 px-6 text-center">
+        <div className="w-24 h-24 bg-destructive/10 rounded-full flex items-center justify-center">
+          <Users className="h-12 w-12 text-destructive" />
+        </div>
+        <h1 className="text-3xl font-bold text-foreground">Housefull!</h1>
+        <p className="text-muted-foreground text-lg max-w-sm">
+          All spots for <span className="font-semibold text-foreground">"{tour.title}"</span> have been filled. Check out other available tours.
+        </p>
+        <button onClick={() => navigate('/')} className="px-8 py-3 bg-primary text-primary-foreground rounded-full font-bold hover:opacity-90 transition-opacity shadow-md">
+          Browse Other Tours
+        </button>
       </div>
     );
   }
@@ -106,7 +162,7 @@ export function Booking() {
         <div className="bg-card border border-border/40 shadow-[0_2px_20px_rgb(0,0,0,0.04)] rounded-3xl overflow-hidden p-4">
           <div className="flex gap-4">
             <img
-              src={tour.image}
+              src={tour.image ? (tour.image.startsWith('http') ? tour.image : `http://127.0.0.1:8000${tour.image}`) : `https://source.unsplash.com/featured/?${tour.location}`}
               alt={tour.title}
               className="w-28 h-28 rounded-2xl object-cover shadow-sm"
             />
@@ -115,6 +171,9 @@ export function Booking() {
               <p className="text-sm text-muted-foreground mb-2 font-medium">{tour.location}</p>
               <p className="text-sm text-primary font-medium">
                 {new Date(tour.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1 font-medium">
+                {slotsLeft} spot{slotsLeft !== 1 ? 's' : ''} remaining
               </p>
             </div>
           </div>
@@ -125,7 +184,7 @@ export function Booking() {
       <div className="px-5 mb-8">
         <label className="block mb-3 font-semibold text-lg">Number of Participants</label>
         <div className="flex gap-3">
-          {Array.from({ length: Math.min(tour.slotsLeft, 4) }, (_, i) => i + 1).map((num) => (
+          {Array.from({ length: Math.min(slotsLeft, 4) }, (_, i) => i + 1).map((num) => (
             <button
               key={num}
               onClick={() => setParticipants(num)}
@@ -230,9 +289,8 @@ export function Booking() {
       )}
 
       {/* Bottom Bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-card/80 backdrop-blur-xl border-t border-border/50 p-5 z-50 safe-area-inset-bottom pb-8">
+      <div className="fixed bottom-0 left-0 right-0 bg-card/80 backdrop-blur-xl border-t border-border/50 p-5 z-50 pb-8">
         <div className="max-w-md mx-auto">
-          {/* Price Breakdown */}
           <div className="mb-5 space-y-2.5 text-sm">
             <div className="flex justify-between text-muted-foreground font-medium">
               <span>${tour.price} × {participants} {participants === 1 ? 'person' : 'people'}</span>

@@ -1,6 +1,3 @@
-from django.shortcuts import render
-
-# Create your views here.
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import authenticate, login as django_login
@@ -9,6 +6,7 @@ from django.contrib.auth import logout as django_logout
 import json
 from django.contrib.auth import get_user_model
 from django.views.decorators.http import require_POST
+from rest_framework.authtoken.models import Token
 
 
 def me(request):
@@ -51,16 +49,18 @@ def login_view(request):
 	if user is not None:
 		django_login(request, user)
 		# ensure CSRF cookie is set for subsequent requests
-		token = get_token(request)
+		csrftoken = get_token(request)
+		token, _ = Token.objects.get_or_create(user=user)
 		resp = JsonResponse({
 			'id': str(user.id),
 			'username': user.username,
 			'email': user.email,
 			'is_guide': getattr(user, 'is_guide', False),
-			'csrfToken': token,
+			'csrfToken': csrftoken,
+			'token': token.key,
 		})
 		# Also set cookie for best-effort; some dev setups block cross-port cookies
-		resp.set_cookie('csrftoken', token)
+		resp.set_cookie('csrftoken', csrftoken)
 		return resp
 
 	# helpful debug: indicate whether the username exists
@@ -102,10 +102,18 @@ def register_view(request):
 	user.is_guide = is_guide
 	user.save()
 
-	# return CSRF token in response for convenience in dev setups
-	token = get_token(request)
-	resp = JsonResponse({'id': str(user.id), 'username': user.username, 'email': user.email, 'is_guide': user.is_guide, 'csrfToken': token}, status=201)
-	resp.set_cookie('csrftoken', token)
+	# return CSRF token and Auth Token in response for convenience in dev setups
+	csrftoken = get_token(request)
+	token, _ = Token.objects.get_or_create(user=user)
+	resp = JsonResponse({
+		'id': str(user.id), 
+		'username': user.username, 
+		'email': user.email, 
+		'is_guide': user.is_guide, 
+		'csrfToken': csrftoken,
+		'token': token.key
+	}, status=201)
+	resp.set_cookie('csrftoken', csrftoken)
 	return resp
 
 

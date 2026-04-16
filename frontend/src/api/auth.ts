@@ -13,10 +13,13 @@ export const login = async (username: string, password: string) => {
     // response should include user details already
     try {
       const me = await res.json();
-      // persist user and CSRF token (if returned)
+      // persist user and CSRF/Auth token (if returned)
       localStorage.setItem('user', JSON.stringify(me));
       if (me.csrfToken) {
         localStorage.setItem('csrfToken', me.csrfToken);
+      }
+      if (me.token) {
+        localStorage.setItem('token', me.token);
       }
       return { ok: true, user: me };
     } catch (err) {
@@ -39,4 +42,5 @@ export const logout = async () => {
   }
   localStorage.removeItem('user');
   localStorage.removeItem('csrfToken');
+  localStorage.removeItem('token');
 };
