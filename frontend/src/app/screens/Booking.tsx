@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useLocation, useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, CreditCard, Smartphone, Check, Loader2, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { getTour } from '../../api/tours';
@@ -8,9 +8,14 @@ import { apiFetch } from '../../api/client';
 export function Booking() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [step, setStep] = useState<'payment' | 'success'>('payment');
   const [paymentMethod, setPaymentMethod] = useState<'upi' | 'card'>('upi');
-  const [participants, setParticipants] = useState(1);
+  
+  // Start with passed participants or default to 1
+  const initialParticipants = location.state?.participants || 1;
+  const [participants, setParticipants] = useState(initialParticipants);
+  
   const [tour, setTour] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -142,7 +147,7 @@ export function Booking() {
   }
 
   return (
-    <div className="min-h-screen pb-32">
+    <div className="min-h-screen overflow-y-auto pb-48">
       {/* Header */}
       <div className="bg-gradient-to-b from-primary/10 to-background text-foreground px-5 pt-10 pb-6">
         <div className="flex items-center gap-4 mb-2">
@@ -180,25 +185,7 @@ export function Booking() {
         </div>
       </div>
 
-      {/* Participants */}
-      <div className="px-5 mb-8">
-        <label className="block mb-3 font-semibold text-lg">Number of Participants</label>
-        <div className="flex gap-3">
-          {Array.from({ length: Math.min(slotsLeft, 4) }, (_, i) => i + 1).map((num) => (
-            <button
-              key={num}
-              onClick={() => setParticipants(num)}
-              className={`flex-1 py-3.5 rounded-2xl border transition-all font-semibold ${
-                participants === num
-                  ? 'bg-primary text-primary-foreground border-primary shadow-[0_4px_14px_rgba(43,92,67,0.3)]'
-                  : 'bg-card border-border/50 text-foreground hover:border-primary/50'
-              }`}
-            >
-              {num}
-            </button>
-          ))}
-        </div>
-      </div>
+      {/* Removed local participants selector as it's set on the previous page */}
 
       {/* Payment Method */}
       <div className="px-5 mb-8">

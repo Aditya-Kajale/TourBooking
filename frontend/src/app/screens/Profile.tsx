@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { logout } from '../../api/auth';
+import { getTours } from '../../api/tours';
 import { User, LogOut, Mail, CircleUserRound, MapPin, Calendar } from 'lucide-react';
 
 export function Profile() {
@@ -18,9 +19,21 @@ export function Profile() {
       const parsed = JSON.parse(raw);
       setUser(parsed);
 
-      // Fetch booked tours
+      // Fetch booked tours and cross-validate with backend active tours
       const localBookings = JSON.parse(localStorage.getItem('booked_tours') || '[]');
-      setBookedTours(localBookings);
+      getTours().then((allTours: any[]) => {
+        const activeIds = new Set(allTours.map((t) => t.id));
+        const validBookings = localBookings.filter((b: any) => activeIds.has(b.id));
+        
+        // Cleanup stale offline bookings
+        if (validBookings.length !== localBookings.length) {
+           localStorage.setItem('booked_tours', JSON.stringify(validBookings));
+        }
+        setBookedTours(validBookings);
+      }).catch(() => {
+        // Fallback to local storage if network fails
+        setBookedTours(localBookings);
+      });
     } catch {
       navigate('/');
     }
@@ -149,7 +162,7 @@ export function Profile() {
             className="md:col-span-2 mt-8 py-5 px-6 bg-destructive/5 text-destructive border border-destructive/20 hover:bg-destructive shadow-sm hover:text-white transition-all font-bold text-xl rounded-full flex items-center justify-center gap-3 active:scale-[0.98]"
           >
             <LogOut className="h-6 w-6" />
-            Terminate Session
+            Log Out
           </button>
         </div>
       </div>

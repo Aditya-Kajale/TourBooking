@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, MapPin, Calendar, Clock, Users, Star,
-  Share2, Heart, MessageCircle, Check, Loader2, Trash2
+  Share2, Heart, MessageCircle, Check, Loader2, Trash2, CheckCircle, AlertCircle
 } from 'lucide-react';
 // ✅ Import the API helper
 import { getTour, deleteTour } from "../../api/tours";
@@ -18,6 +18,7 @@ export function TourDetail() {
   const [error, setError] = useState<string | null>(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [showBookingModal, setShowBookingModal] = useState(false);
+  const [participants, setParticipants] = useState(1);
 
   const handleDelete = async () => {
     if (!id) return;
@@ -65,6 +66,9 @@ export function TourDetail() {
     if (raw) currentUserId = JSON.parse(raw).id;
   } catch { }
 
+  const localBookings = JSON.parse(localStorage.getItem('booked_tours') || '[]');
+  const isAlreadyBooked = id ? localBookings.some((t: any) => t.id === id) : false;
+
   // ✅ Loading View
   if (loading) {
     return (
@@ -74,6 +78,7 @@ export function TourDetail() {
       </div>
     );
   }
+
 
   // ✅ Error View
   if (error || !tour) {
@@ -85,10 +90,10 @@ export function TourDetail() {
         <h2 className="text-xl font-semibold mb-2">Tour not found</h2>
         <p className="text-muted-foreground mb-6">{error || "The tour you are looking for doesn't exist or has been removed."}</p>
         <button
-          onClick={() => navigate('/tours')}
+          onClick={() => navigate('/')}
           className="px-6 py-2 bg-primary text-primary-foreground rounded-full"
         >
-          Back to Tours
+          Back to Home
         </button>
       </div>
     );
@@ -101,7 +106,7 @@ export function TourDetail() {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      
+
       {/* 1. Large Hero / Header Section */}
       <div className="relative h-[550px] w-full overflow-hidden">
         <img
@@ -111,7 +116,7 @@ export function TourDetail() {
         />
         {/* Semi-transparent overlay for text readability at the bottom */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-        
+
         {/* Floating Actions */}
         <div className="absolute top-8 left-8 right-8 flex justify-between items-center z-20">
           <button
@@ -171,16 +176,16 @@ export function TourDetail() {
 
       {/* 2. Main content area: 2 Column Layout */}
       <div className="max-w-7xl mx-auto px-8 pt-12 flex flex-col lg:grid lg:grid-cols-12 gap-16 relative">
-        
+
         {/* Left Side: Main Details (8 cols) */}
         <div className="lg:col-span-8 space-y-16">
-          
+
           {/* Quick Stats Grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             {[
-               { icon: Calendar, label: 'Date', val: new Date(tour.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) },
-               { icon: Clock, label: 'Duration', val: tour.duration || "Full Day" },
-               { icon: Users, label: 'Group Size', val: `Max ${tour.max_people || 10}` },
+              { icon: Calendar, label: 'Date', val: new Date(tour.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) },
+              { icon: Clock, label: 'Duration', val: tour.duration || "Full Day" },
+              { icon: Users, label: 'Group Size', val: `Max ${tour.max_people || 10}` },
             ].map((stat, i) => (
               <div key={i} className="bg-card border border-border/50 rounded-3xl p-6 shadow-sm hover:shadow-md transition-shadow group">
                 <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
@@ -223,7 +228,7 @@ export function TourDetail() {
               <div className="space-y-0 relative">
                 {/* Vertical Line */}
                 <div className="absolute left-6 top-8 bottom-8 w-1 bg-gradient-to-b from-primary/20 via-primary/5 to-transparent rounded-full" />
-                
+
                 {tour.itinerary.map((item: any, index: number) => (
                   <div key={index} className="flex gap-8 pb-12 group last:pb-0">
                     <div className="relative z-10 w-12 h-12 bg-card border-4 border-background text-primary font-black rounded-full flex items-center justify-center shrink-0 shadow-md group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
@@ -245,25 +250,25 @@ export function TourDetail() {
 
           {/* Guide Preview */}
           <section className="bg-secondary/40 border border-border/50 rounded-[3rem] p-10 flex flex-col md:flex-row gap-8 items-center md:items-start">
-             <div className="relative shrink-0">
-                <div className="w-32 h-32 rounded-[2rem] bg-primary flex items-center justify-center shadow-2xl ring-4 ring-white/50 pb-2">
-                  <span className="text-6xl font-bold text-white">{(tour.created_by_name || 'G').toString().charAt(0).toUpperCase()}</span>
-                </div>
-                <div className="absolute -bottom-2 -right-2 bg-primary text-white p-2 rounded-xl shadow-lg">
-                  <Check className="w-5 h-5" />
-                </div>
-             </div>
-             <div className="text-center md:text-left">
-                <p className="text-sm font-black uppercase tracking-widest text-primary mb-1">Your Host & Guide</p>
-                <h3 className="text-3xl font-black mb-3">{tour.created_by_name || `Guide #${String(tour.created_by).slice(0, 6)}`}</h3>
-                <div className="flex flex-wrap justify-center md:justify-start gap-4 text-sm font-bold text-muted-foreground mb-6">
-                  <span className="flex items-center gap-1.5"><Star className="w-4 h-4 fill-accent text-accent"/> 4.8 Rating</span>
-                  <span className="flex items-center gap-1.5"><MapPin className="w-4 h-4"/> Local Expert</span>
-                </div>
-                <p className="text-lg text-foreground font-medium leading-relaxed max-w-2xl">
-                  {`Passionate local host excited to share the best experiences with you. Let's make some amazing memories!`}
-                </p>
-             </div>
+            <div className="relative shrink-0">
+              <div className="w-32 h-32 rounded-[2rem] bg-primary flex items-center justify-center shadow-2xl ring-4 ring-white/50 pb-2">
+                <span className="text-6xl font-bold text-white">{(tour.created_by_name || 'G').toString().charAt(0).toUpperCase()}</span>
+              </div>
+              <div className="absolute -bottom-2 -right-2 bg-primary text-white p-2 rounded-xl shadow-lg">
+                <Check className="w-5 h-5" />
+              </div>
+            </div>
+            <div className="text-center md:text-left">
+              <p className="text-sm font-black uppercase tracking-widest text-primary mb-1">Your Host & Guide</p>
+              <h3 className="text-3xl font-black mb-3">{tour.created_by_name || `Guide #${String(tour.created_by).slice(0, 6)}`}</h3>
+              <div className="flex flex-wrap justify-center md:justify-start gap-4 text-sm font-bold text-muted-foreground mb-6">
+                <span className="flex items-center gap-1.5"><Star className="w-4 h-4 fill-accent text-accent" /> 4.8 Rating</span>
+                <span className="flex items-center gap-1.5"><MapPin className="w-4 h-4" /> Local Expert</span>
+              </div>
+              <p className="text-lg text-foreground font-medium leading-relaxed max-w-2xl">
+                {`Passionate local host excited to share the best experiences with you. Let's make some amazing memories!`}
+              </p>
+            </div>
           </section>
         </div>
 
@@ -281,7 +286,7 @@ export function TourDetail() {
             <div className="space-y-6 mb-10">
               <div className="flex justify-between items-center bg-secondary/30 p-4 rounded-2xl">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center">
+                  <div className="w-10 h-10 bg-background rounded-xl shadow-sm flex items-center justify-center">
                     <Users className="h-5 w-5 text-primary" />
                   </div>
                   <span className="font-bold">Group Size</span>
@@ -290,7 +295,7 @@ export function TourDetail() {
               </div>
               <div className="flex justify-between items-center bg-secondary/30 p-4 rounded-2xl">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center">
+                  <div className="w-10 h-10 bg-background rounded-xl shadow-sm flex items-center justify-center">
                     <Check className="h-5 w-5 text-primary" />
                   </div>
                   <span className="font-bold">Availability</span>
@@ -300,6 +305,17 @@ export function TourDetail() {
             </div>
 
             <div className="grid grid-cols-1 gap-4">
+              {isAlreadyBooked && (
+                <div className="flex flex-col items-center justify-center gap-1.5 bg-amber-500/10 text-amber-600 p-4 rounded-2xl border border-amber-500/20 shadow-sm text-center">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                    <span className="font-bold">You have already booked this tour</span>
+                  </div>
+                  <span className="text-sm font-semibold opacity-80 bg-amber-500/10 px-3 py-1 rounded-full mt-1">
+                    Seats booked: {tour.bookings_count || 0} / {tour.max_people || 10}
+                  </span>
+                </div>
+              )}
               {tour.created_by !== currentUserId ? (
                 <>
                   <button
@@ -318,7 +334,7 @@ export function TourDetail() {
                 </>
               ) : (
                 <div className="bg-muted/50 p-6 rounded-3xl text-center border-2 border-dashed border-border">
-                   <p className="font-bold text-muted-foreground">You are the host of this tour. Manage bookings in your dashboard.</p>
+                  <p className="font-bold text-muted-foreground">You are the host of this tour. Manage bookings in your dashboard.</p>
                 </div>
               )}
             </div>
@@ -337,19 +353,33 @@ export function TourDetail() {
             <div className="w-16 h-1.5 bg-muted/30 rounded-full mx-auto mb-8" />
             <h2 className="text-4xl font-black tracking-tight mb-4">Make a Reservation</h2>
             <p className="text-muted-foreground font-medium mb-10">Secure your spot for the {tour.title} experience. You won't be charged until the guide confirms.</p>
-            
+
             <div className="bg-secondary/40 rounded-[2rem] p-8 border border-border/50 mb-10">
+              <div className="flex justify-between items-center mb-4 pb-4 border-b border-border/50 text-xl">
+                <p className="font-bold">Number of Travelers</p>
+                <div className="flex items-center gap-4 bg-background px-4 py-2 rounded-full shadow-inner border border-border/50">
+                  <button
+                    onClick={() => setParticipants(Math.max(1, participants - 1))}
+                    className="w-8 h-8 flex items-center justify-center bg-muted hover:bg-primary hover:text-white rounded-full font-bold transition-colors"
+                  >-</button>
+                  <span className="font-black w-4 text-center">{participants}</span>
+                  <button
+                    onClick={() => setParticipants(participants + 1)}
+                    className="w-8 h-8 flex items-center justify-center bg-muted hover:bg-primary hover:text-white rounded-full font-bold transition-colors"
+                  >+</button>
+                </div>
+              </div>
               <div className="flex justify-between items-center mb-4 pb-4 border-b border-border/50">
-                <p className="font-bold text-lg">Base Price (1 Traveler)</p>
-                <p className="font-black text-2xl text-primary">${tour.price}</p>
+                <p className="font-bold text-lg">Base Price</p>
+                <p className="font-black text-2xl text-primary">${(tour.price * participants).toFixed(2)}</p>
               </div>
               <div className="flex justify-between items-center">
-                 <p className="font-bold text-muted-foreground">Service Fee</p>
-                 <p className="font-bold">$0.00</p>
+                <p className="font-bold text-muted-foreground">Service Fee</p>
+                <p className="font-bold">${((tour.price * participants) * 0.1).toFixed(2)}</p>
               </div>
               <div className="flex justify-between items-center mt-6 pt-6 border-t-2 border-dashed border-border/50">
-                 <p className="font-black text-2xl">Total Payable</p>
-                 <p className="font-black text-4xl text-accent">${tour.price}</p>
+                <p className="font-black text-2xl">Total Payable</p>
+                <p className="font-black text-4xl text-accent">${((tour.price * participants) * 1.1).toFixed(2)}</p>
               </div>
             </div>
 
@@ -361,7 +391,7 @@ export function TourDetail() {
                 Cancel
               </button>
               <button
-                onClick={() => navigate(`/booking/${tour.id}`)}
+                onClick={() => navigate(`/booking/${tour.id}`, { state: { participants } })}
                 className="flex-[2] bg-primary text-primary-foreground py-5 rounded-full font-black text-xl shadow-xl shadow-primary/30"
               >
                 Proceed to Checkout

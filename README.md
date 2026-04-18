@@ -1,78 +1,90 @@
-# Tour Booking Application
+# 🌲 TourBooking
 
-A comprehensive tour booking system with a React (Vite) frontend and a Django REST framework backend.
+A premium, state-of-the-art tour booking platform featuring a **Forest-themed** design system. Built with a modern **React (Vite)** frontend and a robust **Django REST Framework** backend.
 
-## Project Structure
+## ✨ Key Features
 
-- `frontend/`: React application built with Vite and Tailwind CSS.
-- `backend/`: Django application providing the REST API.
+- **🌲 Forest Theme & UI/UX**: Professional, market-ready design featuring glassmorphism, curated color palettes, and smooth micro-animations.
+- **📱 True Responsive Experience**: Fully optimized for both mobile and high-end desktop views with a dedicated split-screen design for authentication.
+- **🗺️ Tour Management**: Create and manage detailed tours with categories (Adventure, Cultural, etc.), durations, and dynamic image uploading with smart URL handling.
+- **🎟️ Real-time Availability**: Advanced seat-tracking logic ensures that booked seats are accurately reflected across the platform, from detail pages to the home grid.
+- **📊 User Dashboard**: Personalized dashboard for users to track their own created tours and active bookings in one place.
+- **⭐ Reviews & Ratings**: Integrated review system for users to share and view feedback on tours.
 
-## Prerequisites
+## 🛠️ Technology Stack
 
-- Node.js (v18 or higher)
-- Python (v3.10 or higher)
-- npm or pnpm
+- **Frontend**: React 18, Vite, Tailwind CSS, Lucide React
+- **Backend**: Django 4.x, Django REST Framework, SQLite (Local Development)
+- **Authentication**: JWT-based secure authentication
+- **Styling**: Vanilla CSS extensions with Glassmorphism and Custom Theme Tokens
 
-## Getting Started
+## 🚀 Getting Started
 
-### Backend Setup
+### Prerequisites
+- **Python**: 3.10+
+- **Node.js**: 18.x+
+- **npm** or **pnpm**
 
-1. Navigate to the backend directory:
+### Backend Setup (Django)
+1. **Navigate to backend**:
    ```bash
    cd backend
    ```
-
-2. Create and activate a virtual environment:
+2. **Environment Setup**:
    ```bash
    python -m venv .env
-   source .env/bin/activate  # On Windows use `.env\Scripts\activate`
+   source .env/bin/activate  # Windows: .env\Scripts\activate
    ```
-
-3. Install dependencies:
+3. **Install Dependencies**:
    ```bash
    pip install -r requirements.txt
    ```
-
-4. Run migrations:
+4. **Database Initialization**:
    ```bash
    python manage.py migrate
    ```
-
-5. Start the development server:
+5. **Run Server**:
    ```bash
    python manage.py runserver
    ```
 
-### Frontend Setup
-
-1. Navigate to the frontend directory:
+### Frontend Setup (Vite + React)
+1. **Navigate to frontend**:
    ```bash
    cd frontend
    ```
-
-2. Install dependencies:
+2. **Install Dependencies**:
    ```bash
    npm install
    ```
-
-3. Create a `.env` file based on `.env.example`:
-   ```bash
-   VITE_API_URL=http://127.0.0.1:8000
-   ```
-
-4. Start the development server:
+3. **Configuration**:
+   Copy `.env.example` to `.env` and ensure `VITE_API_URL` points to your backend (default: `http://127.0.0.1:8000`).
+4. **Run Application**:
    ```bash
    npm run dev
    ```
 
-## Design Aesthetics
+## 🎨 Design Philosophy
 
-The application features a modern, premium design with:
-- Glassmorphism effects
-- Responsive layouts for both mobile and desktop
-- Consistent "Forest" theme color palette
-- Smooth transitions and micro-animations
+TourBooking is built with a focus on **visual excellence** and **interaction design**:
+- **Glassmorphism**: Subtle translucent backgrounds and frosted glass effects on cards and modals.
+- **Micro-interactions**: Hover effects on tour cards and smooth state transitions for a premium feel.
+- **Forest Palette**: A curated selection of deep greens, earthy tones, and high-contrast text for maximum readability.
 
-## License
+## 📁 Project Structure
 
+```text
+TourBooking/
+├── frontend/           # React + Vite + Tailwind source
+│   ├── src/            # Components, Hooks, API services
+│   └── guidelines/     # UI/UX design tokens
+├── backend/            # Django project
+│   ├── tours/          # Tour listing and management
+│   ├── bookings/       # Booking & Seat tracking logic
+│   ├── reviews/        # User feedback system
+│   └── users/          # Auth and profile management
+└── media/              # Uploaded tour images
+```
+
+## 📄 License
 MIT
