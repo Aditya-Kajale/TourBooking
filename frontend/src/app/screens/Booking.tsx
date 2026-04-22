@@ -3,20 +3,30 @@ import { useLocation, useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, CreditCard, Smartphone, Check, Loader2, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { getTour } from '../../api/tours';
-import { apiFetch } from '../../api/client';
+import { createBooking } from '../../api/bookings';
+import type { Tour } from '../../api/types';
 
 export function Booking() {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const [step, setStep] = useState<'payment' | 'success'>('payment');
-  const [paymentMethod, setPaymentMethod] = useState<'upi' | 'card'>('upi');
-  
   // Start with passed participants or default to 1
   const initialParticipants = location.state?.participants || 1;
-  const [participants, setParticipants] = useState(initialParticipants);
+  const [step, setStep] = useState<'details' | 'payment' | 'success'>(initialParticipants > 1 ? 'details' : 'payment');
+  const [paymentMethod, setPaymentMethod] = useState<'upi' | 'card'>('upi');
   
-  const [tour, setTour] = useState<any>(null);
+  const [participants, setParticipants] = useState(initialParticipants);
+  const [participantDetails, setParticipantDetails] = useState<{name: string, phone: string}[]>(
+    Array.from({ length: initialParticipants }, () => ({ name: '', phone: '' }))
+  );
+
+  const handleDetailChange = (index: number, field: 'name' | 'phone', value: string) => {
+    const newDetails = [...participantDetails];
+    newDetails[index] = { ...newDetails[index], [field]: value };
+    setParticipantDetails(newDetails);
+  };
+  
+  const [tour, setTour] = useState<Tour | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -54,14 +64,15 @@ export function Booking() {
   const handlePayment = async () => {
     toast.success('Processing payment...');
     try {
-      await apiFetch('/api/bookings/', {
-        method: 'POST',
-        body: JSON.stringify({
-          tour: tour.id,
-          participants,
-          date: tour.date,
-          total_price: total
-        })
+      await createBooking({
+        tour: tour.id,
+        participants,
+        date: tour.date,
+        total_price: total,
+        participant_details: participants > 1 ? participantDetails : [],
+        status: 'confirmed',
+        payment_status: 'paid',
+        payment_method: paymentMethod
       });
       
       const bookedTours = JSON.parse(localStorage.getItem('booked_tours') || '[]');
@@ -104,7 +115,7 @@ export function Booking() {
               </div>
               <div className="flex justify-between pt-4 mt-2 border-t border-border/50">
                 <span className="font-semibold text-foreground">Total Paid</span>
-                <span className="text-lg font-bold text-primary">${total}</span>
+                <span className="text-lg font-bold text-primary">₹{total}</span>
               </div>
             </div>
           </div>
@@ -185,94 +196,125 @@ export function Booking() {
         </div>
       </div>
 
-      {/* Removed local participants selector as it's set on the previous page */}
-
-      {/* Payment Method */}
-      <div className="px-5 mb-8">
-        <label className="block mb-3 font-semibold text-lg">Payment Method</label>
-        <div className="space-y-3">
-          <button
-            onClick={() => setPaymentMethod('upi')}
-            className={`w-full flex items-center gap-4 p-4 rounded-2xl border transition-all ${
-              paymentMethod === 'upi'
-                ? 'bg-primary/5 border-primary/50 ring-1 ring-primary/20'
-                : 'bg-card border-border/50 hover:border-border'
-            }`}
-          >
-            <div className={`w-5 h-5 rounded-full border-[1.5px] flex items-center justify-center shrink-0 transition-colors ${
-              paymentMethod === 'upi' ? 'border-primary' : 'border-muted-foreground/50'
-            }`}>
-              {paymentMethod === 'upi' && <div className="w-2.5 h-2.5 rounded-full bg-primary" />}
-            </div>
-            <div className="w-10 h-10 bg-secondary/10 rounded-full flex items-center justify-center shrink-0">
-              <Smartphone className="h-5 w-5 text-primary" />
-            </div>
-            <span className="font-medium text-foreground">UPI Payment</span>
-          </button>
-
-          <button
-            onClick={() => setPaymentMethod('card')}
-            className={`w-full flex items-center gap-4 p-4 rounded-2xl border transition-all ${
-              paymentMethod === 'card'
-                ? 'bg-primary/5 border-primary/50 ring-1 ring-primary/20'
-                : 'bg-card border-border/50 hover:border-border'
-            }`}
-          >
-            <div className={`w-5 h-5 rounded-full border-[1.5px] flex items-center justify-center shrink-0 transition-colors ${
-              paymentMethod === 'card' ? 'border-primary' : 'border-muted-foreground/50'
-            }`}>
-              {paymentMethod === 'card' && <div className="w-2.5 h-2.5 rounded-full bg-primary" />}
-            </div>
-            <div className="w-10 h-10 bg-secondary/10 rounded-full flex items-center justify-center shrink-0">
-              <CreditCard className="h-5 w-5 text-primary" />
-            </div>
-            <span className="font-medium text-foreground">Credit / Debit Card</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Payment Form */}
-      {paymentMethod === 'upi' ? (
+      {/* Participant Details Collection */}
+      {step === 'details' && participants > 1 && (
         <div className="px-5 mb-8">
-          <label className="block mb-2 text-sm font-semibold text-foreground">UPI ID</label>
-          <input
-            type="text"
-            placeholder="yourname@upi"
-            className="w-full px-5 py-4 bg-card border border-border/50 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-[0_2px_10px_rgb(0,0,0,0.02)]"
-          />
-        </div>
-      ) : (
-        <div className="px-5 mb-8 space-y-4">
-          <div>
-            <label className="block mb-2 text-sm font-semibold text-foreground">Card Number</label>
-            <input
-              type="text"
-              placeholder="1234 5678 9012 3456"
-              maxLength={19}
-              className="w-full px-5 py-4 bg-card border border-border/50 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-[0_2px_10px_rgb(0,0,0,0.02)] font-medium tracking-wide placeholder:tracking-normal"
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block mb-2 text-sm font-semibold text-foreground">Expiry</label>
-              <input
-                type="text"
-                placeholder="MM/YY"
-                maxLength={5}
-                className="w-full px-5 py-4 bg-card border border-border/50 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-[0_2px_10px_rgb(0,0,0,0.02)] font-medium tracking-wide placeholder:tracking-normal"
-              />
-            </div>
-            <div>
-              <label className="block mb-2 text-sm font-semibold text-foreground">CVV</label>
-              <input
-                type="text"
-                placeholder="123"
-                maxLength={3}
-                className="w-full px-5 py-4 bg-card border border-border/50 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-[0_2px_10px_rgb(0,0,0,0.02)] font-medium tracking-wide placeholder:tracking-normal"
-              />
-            </div>
+          <label className="block mb-3 font-semibold text-lg">Participant Details</label>
+          <div className="space-y-4">
+            {participantDetails.map((detail, index) => (
+              <div key={index} className="bg-card border border-border/50 p-4 rounded-2xl shadow-[0_2px_10px_rgb(0,0,0,0.02)]">
+                <p className="font-semibold mb-3 text-sm">Participant {index + 1}</p>
+                <div className="space-y-3">
+                  <input
+                    type="text"
+                    placeholder="Full Name"
+                    value={detail.name}
+                    onChange={(e) => handleDetailChange(index, 'name', e.target.value)}
+                    className="w-full px-4 py-3 bg-background border border-border/50 rounded-xl outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm"
+                  />
+                  <input
+                    type="tel"
+                    placeholder="Phone Number"
+                    value={detail.phone}
+                    onChange={(e) => handleDetailChange(index, 'phone', e.target.value)}
+                    className="w-full px-4 py-3 bg-background border border-border/50 rounded-xl outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm"
+                  />
+                </div>
+              </div>
+            ))}
           </div>
         </div>
+      )}
+
+      {/* Payment Method & Form */}
+      {step === 'payment' && (
+        <>
+          <div className="px-5 mb-8">
+            <label className="block mb-3 font-semibold text-lg">Payment Method</label>
+            <div className="space-y-3">
+              <button
+                onClick={() => setPaymentMethod('upi')}
+                className={`w-full flex items-center gap-4 p-4 rounded-2xl border transition-all ${
+                  paymentMethod === 'upi'
+                    ? 'bg-primary/5 border-primary/50 ring-1 ring-primary/20'
+                    : 'bg-card border-border/50 hover:border-border'
+                }`}
+              >
+                <div className={`w-5 h-5 rounded-full border-[1.5px] flex items-center justify-center shrink-0 transition-colors ${
+                  paymentMethod === 'upi' ? 'border-primary' : 'border-muted-foreground/50'
+                }`}>
+                  {paymentMethod === 'upi' && <div className="w-2.5 h-2.5 rounded-full bg-primary" />}
+                </div>
+                <div className="w-10 h-10 bg-secondary/10 rounded-full flex items-center justify-center shrink-0">
+                  <Smartphone className="h-5 w-5 text-primary" />
+                </div>
+                <span className="font-medium text-foreground">UPI Payment</span>
+              </button>
+
+              <button
+                onClick={() => setPaymentMethod('card')}
+                className={`w-full flex items-center gap-4 p-4 rounded-2xl border transition-all ${
+                  paymentMethod === 'card'
+                    ? 'bg-primary/5 border-primary/50 ring-1 ring-primary/20'
+                    : 'bg-card border-border/50 hover:border-border'
+                }`}
+              >
+                <div className={`w-5 h-5 rounded-full border-[1.5px] flex items-center justify-center shrink-0 transition-colors ${
+                  paymentMethod === 'card' ? 'border-primary' : 'border-muted-foreground/50'
+                }`}>
+                  {paymentMethod === 'card' && <div className="w-2.5 h-2.5 rounded-full bg-primary" />}
+                </div>
+                <div className="w-10 h-10 bg-secondary/10 rounded-full flex items-center justify-center shrink-0">
+                  <CreditCard className="h-5 w-5 text-primary" />
+                </div>
+                <span className="font-medium text-foreground">Credit / Debit Card</span>
+              </button>
+            </div>
+          </div>
+
+          {paymentMethod === 'upi' ? (
+            <div className="px-5 mb-8">
+              <label className="block mb-2 text-sm font-semibold text-foreground">UPI ID</label>
+              <input
+                type="text"
+                placeholder="yourname@upi"
+                className="w-full px-5 py-4 bg-card border border-border/50 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-[0_2px_10px_rgb(0,0,0,0.02)]"
+              />
+            </div>
+          ) : (
+            <div className="px-5 mb-8 space-y-4">
+              <div>
+                <label className="block mb-2 text-sm font-semibold text-foreground">Card Number</label>
+                <input
+                  type="text"
+                  placeholder="1234 5678 9012 3456"
+                  maxLength={19}
+                  className="w-full px-5 py-4 bg-card border border-border/50 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-[0_2px_10px_rgb(0,0,0,0.02)] font-medium tracking-wide placeholder:tracking-normal"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block mb-2 text-sm font-semibold text-foreground">Expiry</label>
+                  <input
+                    type="text"
+                    placeholder="MM/YY"
+                    maxLength={5}
+                    className="w-full px-5 py-4 bg-card border border-border/50 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-[0_2px_10px_rgb(0,0,0,0.02)] font-medium tracking-wide placeholder:tracking-normal"
+                  />
+                </div>
+                <div>
+                  <label className="block mb-2 text-sm font-semibold text-foreground">CVV</label>
+                  <input
+                    type="text"
+                    placeholder="123"
+                    maxLength={3}
+                    className="w-full px-5 py-4 bg-card border border-border/50 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-[0_2px_10px_rgb(0,0,0,0.02)] font-medium tracking-wide placeholder:tracking-normal"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {/* Bottom Bar */}
@@ -280,25 +322,41 @@ export function Booking() {
         <div className="max-w-md mx-auto">
           <div className="mb-5 space-y-2.5 text-sm">
             <div className="flex justify-between text-muted-foreground font-medium">
-              <span>${tour.price} × {participants} {participants === 1 ? 'person' : 'people'}</span>
-              <span className="text-foreground">${subtotal}</span>
+              <span>₹{tour.price} × {participants} {participants === 1 ? 'person' : 'people'}</span>
+              <span className="text-foreground">₹{subtotal}</span>
             </div>
             <div className="flex justify-between text-muted-foreground font-medium">
               <span>Service Fee</span>
-              <span className="text-foreground">${serviceFee}</span>
+              <span className="text-foreground">₹{serviceFee}</span>
             </div>
             <div className="flex justify-between pt-3 mt-1 border-t border-border/50">
               <span className="font-semibold text-foreground text-base">Total</span>
-              <span className="text-lg font-bold text-primary">${total}</span>
+              <span className="text-lg font-bold text-primary">₹{total}</span>
             </div>
           </div>
 
-          <button
-            onClick={handlePayment}
-            className="w-full bg-primary text-primary-foreground py-4 rounded-full hover:opacity-90 transition-opacity shadow-[0_4px_14px_rgba(43,92,67,0.3)] font-semibold text-lg"
-          >
-            Pay ${total}
-          </button>
+          {step === 'details' ? (
+            <button
+              onClick={() => {
+                const isComplete = participantDetails.every(p => p.name.trim() !== '' && p.phone.trim() !== '');
+                if (!isComplete) {
+                  toast.error('Please fill in all participant details.');
+                  return;
+                }
+                setStep('payment');
+              }}
+              className="w-full bg-primary text-primary-foreground py-4 rounded-full hover:opacity-90 transition-opacity font-semibold text-lg"
+            >
+              Continue to Payment
+            </button>
+          ) : (
+            <button
+              onClick={handlePayment}
+              className="w-full bg-primary text-primary-foreground py-4 rounded-full hover:opacity-90 transition-opacity shadow-[0_4px_14px_rgba(43,92,67,0.3)] font-semibold text-lg"
+            >
+              Pay ₹{total}
+            </button>
+          )}
         </div>
       </div>
     </div>

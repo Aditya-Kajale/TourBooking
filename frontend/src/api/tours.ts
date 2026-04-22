@@ -1,41 +1,27 @@
 import { apiFetch } from "./client";
+import type { Tour } from "./types";
 
-export const getTours = () => apiFetch("/api/tours/");
+/**
+ * All tour-related API calls.
+ * Identification (X-DEV-USER) and CSRF tokens are handled centrally in client.ts
+ */
 
-export const createTour = (data: FormData) =>
-    apiFetch("/api/tours/", (function() {
-        const headers: any = {};
-        try {
-            const raw = localStorage.getItem('user');
-            if (raw) {
-                const user = JSON.parse(raw);
-                if (user && user.id) headers['X-DEV-USER'] = user.id;
-            }
-        } catch (e) {}
-        return {
-            method: "POST",
-            body: data,
-            headers,
-        };
-    })());
+export const getTours = (): Promise<Tour[]> =>
+    apiFetch<Tour[]>("/api/tours/");
 
-export const getToursByDate = (date: string) =>
-    apiFetch(`/api/tours/?date=${date}`);
-
-export const getTour = (id: number | string) => apiFetch(`/api/tours/${id}/`);
-
-export const deleteTour = (id: string) => {
-    const headers: any = {};
-    try {
-        const raw = localStorage.getItem('user');
-        if (raw) {
-            const user = JSON.parse(raw);
-            if (user && user.id) headers['X-DEV-USER'] = user.id;
-        }
-    } catch (e) {}
-    
-    return apiFetch(`/api/tours/${id}/`, {
-        method: "DELETE",
-        headers,
+export const createTour = (data: FormData): Promise<Tour> =>
+    apiFetch<Tour>("/api/tours/", {
+        method: "POST",
+        body: data,
     });
-};
+
+export const getToursByDate = (date: string): Promise<Tour[]> =>
+    apiFetch<Tour[]>(`/api/tours/?date=${date}`);
+
+export const getTour = (id: number | string): Promise<Tour> =>
+    apiFetch<Tour>(`/api/tours/${id}/`);
+
+export const deleteTour = (id: string): Promise<null> =>
+    apiFetch<null>(`/api/tours/${id}/`, {
+        method: "DELETE",
+    });

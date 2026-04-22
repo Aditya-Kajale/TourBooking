@@ -19,6 +19,7 @@ class Booking(models.Model):
     payment_method = models.CharField(max_length=50, blank=True, null=True)
     paid_at = models.DateTimeField(blank=True, null=True)
     status = models.CharField(max_length=20, default='pending')  # e.g. pending, confirmed, cancelled
+    participant_details = models.JSONField(default=list, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

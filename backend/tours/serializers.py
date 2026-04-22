@@ -6,6 +6,7 @@ class TourSerializer(serializers.ModelSerializer):
     created_by_name = serializers.SerializerMethodField()
     bookings_count = serializers.SerializerMethodField()
     is_housefull = serializers.SerializerMethodField()
+    available_seats = serializers.SerializerMethodField()
 
     def get_created_by_name(self, obj):
         try:
@@ -30,6 +31,22 @@ class TourSerializer(serializers.ModelSerializer):
         except Exception:
             return False
 
+    def get_available_seats(self, obj):
+        """Return remaining seats: max_people - total participants booked."""
+        try:
+            result = obj.booking_set.aggregate(total=Sum('participants'))
+            total_booked = result['total'] or 0
+            remaining = obj.max_people - total_booked
+            return max(remaining, 0)
+        except Exception:
+            return obj.max_people
+
+    def validate_date(self, value):
+        from datetime import date
+        if value < date.today():
+            raise serializers.ValidationError("Tour date cannot be in the past.")
+        return value
+
     class Meta:
         model = Tour
         fields = [
@@ -47,6 +64,7 @@ class TourSerializer(serializers.ModelSerializer):
     'created_by_name',
     'bookings_count',
     'is_housefull',
+    'available_seats',
     'created_at'
 ]
-        read_only_fields = ['created_by', 'created_by_name', 'bookings_count', 'is_housefull']
+        read_only_fields = ['created_by', 'created_by_name', 'bookings_count', 'is_housefull', 'available_seats']

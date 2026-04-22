@@ -1,15 +1,62 @@
 from rest_framework import viewsets
-from rest_framework.permissions import IsAuthenticatedOrReadOnly
+from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticated, BasePermission
+from rest_framework.authentication import SessionAuthentication, BasicAuthentication, BaseAuthentication
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from django.conf import settings
+from django.contrib.auth import get_user_model
 from .models import Booking
 from .serializers import BookingSerializer
 from rest_framework.exceptions import PermissionDenied
 from tours.models import Tour
 
 
+class DevHeaderAuthentication(BaseAuthentication):
+    """
+    Custom authentication to trust X-DEV-USER header in local development.
+    Reused from tours app for consistency.
+    """
+    def authenticate(self, request):
+        if not settings.DEBUG:
+            return None
+        dev_user = request.META.get('HTTP_X_DEV_USER')
+        if not dev_user:
+            return None
+
+        User = get_user_model()
+        try:
+            user = User.objects.get(pk=dev_user)
+            return (user, None)
+        except Exception:
+            try:
+                user = User.objects.get(username=dev_user)
+                return (user, None)
+            except Exception:
+                pass
+        return None
+
+
+class DevHeaderAllowPermission(BasePermission):
+    """Allow all methods if X-DEV-USER header present in DEBUG mode."""
+    def has_permission(self, request, view):
+        if settings.DEBUG and request.META.get('HTTP_X_DEV_USER'):
+            return True
+        return IsAuthenticatedOrReadOnly().has_permission(request, view)
+
+
 class BookingViewSet(viewsets.ModelViewSet):
     queryset = Booking.objects.all().order_by('-created_at')
     serializer_class = BookingSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    permission_classes = [DevHeaderAllowPermission]
+    authentication_classes = [DevHeaderAuthentication, SessionAuthentication, BasicAuthentication]
+
+    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
+    def me(self, request):
+        """Return bookings belonging to the authenticated user."""
+        user = request.user
+        qs = self.get_queryset().filter(user=user)
+        serializer = self.get_serializer(qs, many=True)
+        return Response(serializer.data)
 
     def perform_create(self, serializer):
         tour = None

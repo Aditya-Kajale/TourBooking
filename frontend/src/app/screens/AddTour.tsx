@@ -121,7 +121,7 @@ export function AddTour() {
   return (
     <div className="min-h-[calc(100vh-64px)] bg-background pb-24">
       {/* Enhanced Header */}
-      <div className="bg-primary px-8 pt-16 pb-28 shadow-sm relative overflow-hidden">
+      <div className="bg-primary px-4 md:px-8 pt-16 pb-28 shadow-sm relative overflow-hidden">
         <div className="absolute top-0 right-0 w-full h-full opacity-[0.03] bg-[radial-gradient(ellipse_at_bottom_right,_var(--tw-gradient-stops))] from-white via-transparent to-transparent pointer-events-none" />
         <div className="max-w-4xl mx-auto relative z-10">
           <h1 className="text-4xl font-extrabold text-primary-foreground tracking-tight mb-2">Host an Experience</h1>
@@ -129,8 +129,8 @@ export function AddTour() {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-8 -mt-16 relative z-20">
-        <div className="bg-card p-8 md:p-12 rounded-[2.5rem] border border-border/50 shadow-sm">
+      <div className="max-w-4xl mx-auto px-4 md:px-8 -mt-16 relative z-20">
+        <div className="bg-card p-6 md:p-12 rounded-[2.5rem] border border-border/50 shadow-sm">
           <form onSubmit={handleSubmit} className="space-y-8">
             
             {/* Form Section Headers */}
@@ -171,6 +171,7 @@ export function AddTour() {
                 <input
                   type="date"
                   value={formData.date}
+                  min={new Date().toISOString().split('T')[0]}
                   onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                   className="w-full px-5 py-4 rounded-2xl border border-border/80 bg-background focus:bg-card focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none font-medium"
                 />
@@ -191,7 +192,7 @@ export function AddTour() {
 
               {/* PRICE */}
               <div>
-                <label className="block text-sm font-bold uppercase tracking-wider text-foreground mb-2">Price per person ($)</label>
+                <label className="block text-sm font-bold uppercase tracking-wider text-foreground mb-2">Price per person (₹)</label>
                 <input
                   type="number"
                   placeholder="0.00"

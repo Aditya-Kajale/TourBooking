@@ -14,7 +14,7 @@ function getCSRFToken() {
   }
   return "";
 }
-export const apiFetch = async (url: string, options: any = {}) => {
+export const apiFetch = async <T = any>(url: string, options: any = {}): Promise<T> => {
     const isFormData = options.body instanceof FormData;
 
   const method = (options.method || 'GET').toUpperCase();
@@ -49,6 +49,18 @@ export const apiFetch = async (url: string, options: any = {}) => {
     if (apiToken) {
       headers['Authorization'] = `Token ${apiToken}`;
     }
+
+    // 🛠️ DEV-ONLY: Inject X-DEV-USER header for easier local development
+    // This allows the backend to identify the user without session/cookies
+    const rawUser = localStorage.getItem('user');
+    if (rawUser) {
+      try {
+        const user = JSON.parse(rawUser);
+        if (user && user.id) {
+          headers['X-DEV-USER'] = user.id;
+        }
+      } catch (e) {}
+    }
   }
 
   const res = await fetch(`${API_BASE}${url}`, {
@@ -68,13 +80,13 @@ export const apiFetch = async (url: string, options: any = {}) => {
     }
 
     if (res.status === 204) {
-        return null;
+        return null as unknown as T;
     }
 
     try {
         return await res.json();
     } catch (e) {
-        return null;
+        return null as unknown as T;
     }
 
 };
