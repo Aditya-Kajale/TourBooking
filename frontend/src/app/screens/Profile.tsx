@@ -1,13 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { logout } from '../../api/auth';
-import { getTours } from '../../api/tours';
-import { User, LogOut, Mail, CircleUserRound, MapPin, Calendar } from 'lucide-react';
+import { User, LogOut, Mail, CircleUserRound, Calendar } from 'lucide-react';
+import type { User as AppUser } from '../../api/types';
 
 export function Profile() {
   const navigate = useNavigate();
-  const [user, setUser] = useState<{ username?: string; email?: string } | null>(null);
-  const [bookedTours, setBookedTours] = useState<any[]>([]);
+  const [user, setUser] = useState<AppUser | null>(null);
 
   useEffect(() => {
     const raw = localStorage.getItem('user');
@@ -18,22 +17,6 @@ export function Profile() {
     try {
       const parsed = JSON.parse(raw);
       setUser(parsed);
-
-      // Fetch booked tours and cross-validate with backend active tours
-      const localBookings = JSON.parse(localStorage.getItem('booked_tours') || '[]');
-      getTours().then((allTours: any[]) => {
-        const activeIds = new Set(allTours.map((t) => t.id));
-        const validBookings = localBookings.filter((b: any) => activeIds.has(b.id));
-        
-        // Cleanup stale offline bookings
-        if (validBookings.length !== localBookings.length) {
-           localStorage.setItem('booked_tours', JSON.stringify(validBookings));
-        }
-        setBookedTours(validBookings);
-      }).catch(() => {
-        // Fallback to local storage if network fails
-        setBookedTours(localBookings);
-      });
     } catch {
       navigate('/');
     }
@@ -49,7 +32,7 @@ export function Profile() {
   return (
     <div className="min-h-screen bg-background pb-32">
       {/* Enhanced Header Area with Nature Background Image */}
-      <div className="relative px-8 pt-20 pb-28 shadow-sm overflow-hidden bg-primary">
+      <div className="relative px-4 md:px-8 pt-20 pb-28 shadow-sm overflow-hidden bg-primary">
         {/* Nature Background - fallback to Unsplash forest */}
         <div className="absolute inset-0 z-0">
           <img
@@ -74,7 +57,7 @@ export function Profile() {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-8 -mt-12 relative z-20 pb-24">
+      <div className="max-w-4xl mx-auto px-4 md:px-8 -mt-12 relative z-20 pb-24">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
           {/* Info Cards */}
@@ -114,47 +97,23 @@ export function Profile() {
               </div>
             </div>
           </div>
-          {/* Upcoming Booked Tours Section */}
+          {/* Quick Link to My Bookings */}
           <div className="md:col-span-2 mt-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-foreground">My Upcoming Adventures</h2>
-              <span className="bg-primary/10 text-primary font-bold px-3 py-1 rounded-full text-sm">{bookedTours.length}</span>
-            </div>
-
-            {bookedTours.length === 0 ? (
-              <div className="bg-card border border-border/50 rounded-3xl p-12 text-center shadow-sm">
-                <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mx-auto mb-4 overflow-hidden shadow-inner">
-                  <img src="https://source.unsplash.com/100x100/?compass,map" alt="Empty state" className="opacity-50 mix-blend-luminosity" />
+            <button
+              onClick={() => navigate('/my-bookings')}
+              className="w-full bg-card border border-border/50 rounded-3xl p-8 shadow-sm hover:border-primary/30 transition-all group flex items-center justify-between cursor-pointer"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Calendar className="h-7 w-7 text-primary" />
                 </div>
-                <h3 className="text-xl font-bold text-foreground mb-2">No upcoming tours yet</h3>
-                <p className="text-muted-foreground text-sm max-w-sm mx-auto mb-6">Explore our curated destinations and start checking off your bucket list.</p>
-                <button onClick={() => navigate('/')} className="bg-primary text-primary-foreground font-bold px-6 py-3 rounded-full hover:scale-105 transition-transform shadow-md">Find an Adventure</button>
+                <div className="text-left">
+                  <h3 className="text-xl font-bold text-foreground group-hover:text-primary transition-colors">My Bookings</h3>
+                  <p className="text-sm text-muted-foreground font-medium">View all your tour reservations and upcoming adventures</p>
+                </div>
               </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {bookedTours.map((tour, idx) => (
-                  <div key={`${tour.id}-${idx}`} onClick={() => navigate(`/tour/${tour.id}`)} className="bg-card rounded-2xl border border-border overflow-hidden shadow-sm hover:shadow-lg transition-all cursor-pointer group flex">
-                    <div className="w-1/3 shrink-0 relative overflow-hidden">
-                      <img
-                        src={tour.image ? (tour.image.startsWith('http') ? tour.image : `http://127.0.0.1:8000${tour.image}`) : `https://source.unsplash.com/featured/?${tour.location}`}
-                        alt={tour.title}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                      />
-                      <div className="absolute top-2 left-2 bg-background/90 text-foreground text-[10px] uppercase font-bold px-2 py-1 rounded shadow-sm">
-                        Paid ✓
-                      </div>
-                    </div>
-                    <div className="p-4 flex-1 flex flex-col justify-center">
-                      <h4 className="font-bold text-foreground leading-tight mb-2 line-clamp-2 group-hover:text-primary transition-colors">{tour.title}</h4>
-                      <div className="space-y-1.5">
-                        <p className="text-xs text-muted-foreground font-medium flex items-center gap-1.5"><MapPin size={14} className="text-primary" /> {tour.location}</p>
-                        <p className="text-xs text-muted-foreground font-medium flex items-center gap-1.5"><Calendar size={14} className="text-primary" /> {new Date(tour.date).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+              <span className="text-primary font-bold text-2xl group-hover:translate-x-1 transition-transform">→</span>
+            </button>
           </div>
 
           <button

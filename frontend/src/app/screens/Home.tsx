@@ -3,14 +3,15 @@ import { Search, MapPin, Calendar as CalendarIcon, CheckCircle, Star } from 'luc
 import { useNavigate } from 'react-router-dom';
 import { getTours } from "../../api/tours";
 import { SeatBadge } from '../components/SeatBadge';
+import type { Tour, User } from '../../api/types';
 
 export function Home() {
   const navigate = useNavigate();
 
-  const [tours, setTours] = useState<any[]>([]);
+  const [tours, setTours] = useState<Tour[]>([]);
   const [loading, setLoading] = useState(true);
   const [bookedTours, setBookedTours] = useState<string[]>([]);
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [searchDate, setSearchDate] = useState('');
@@ -44,7 +45,7 @@ export function Home() {
     try {
       const raw = localStorage.getItem('user');
       if (raw) setCurrentUser(JSON.parse(raw));
-    } catch {}
+    } catch { }
   }, []);
 
   const categories = ['All', 'Adventure', 'Culture', 'Food', 'Relaxation'];
@@ -68,7 +69,7 @@ export function Home() {
 
     const matchesGroupSize =
       !tour.max_people || tour.max_people <= filters.maxGroupSize;
-      
+
     const matchesDate = !searchDate || (tour.date && tour.date.startsWith(searchDate));
 
     // Hide tours created by the current user — they are not a customer of their own tours
@@ -80,14 +81,14 @@ export function Home() {
   return (
     <div className="min-h-screen bg-background pt-8 pb-24 px-4 md:px-8">
       <div className="max-w-[1200px] mx-auto flex flex-col md:flex-row justify-center gap-6 md:gap-8 items-start">
-        
+
         {/* Left Sidebar (Search & Navigation) */}
-        <div className="w-full md:w-72 flex-shrink-0 sticky top-24 space-y-4">
+        <div className="w-full md:w-72 flex-shrink-0 md:sticky md:top-24 space-y-4">
           <div className="bg-card rounded-2xl p-5 border border-border shadow-sm flex flex-col gap-4">
             <h2 className="text-xl font-extrabold text-foreground flex items-center gap-2">
-               Discover Tours
+              Discover Tours
             </h2>
-            
+
             {/* Search Input */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -109,25 +110,34 @@ export function Home() {
                 className="w-full px-3 py-2.5 rounded-xl border border-border/60 bg-muted/30 focus:bg-background focus:ring-2 focus:ring-primary/20 outline-none text-sm font-medium text-foreground transition-all"
               />
             </div>
-            
+
+            {/* Clear Filters Button */}
+            {(searchQuery || searchDate || selectedCategory !== 'All') && (
+              <button
+                onClick={() => { setSearchQuery(''); setSearchDate(''); setSelectedCategory('All'); }}
+                className="w-full py-2 bg-destructive/10 text-destructive rounded-xl text-sm font-bold hover:bg-destructive hover:text-white transition-colors"
+              >
+                Clear Filters
+              </button>
+            )}
+
             {/* Categories Menu */}
             <div className="pt-2 border-t border-border/50">
-               <h3 className="text-sm font-bold text-muted-foreground mb-3 uppercase tracking-wider">Categories</h3>
-               <div className="flex flex-col gap-1">
-                 {categories.map((category) => (
-                   <button
-                     key={category}
-                     onClick={() => setSelectedCategory(category)}
-                     className={`text-left px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${
-                       selectedCategory === category
-                         ? 'bg-primary/10 text-primary'
-                         : 'text-foreground hover:bg-muted/50'
-                     }`}
-                   >
-                     {category}
-                   </button>
-                 ))}
-               </div>
+              <h3 className="text-sm font-bold text-muted-foreground mb-3 uppercase tracking-wider">Categories</h3>
+              <div className="flex flex-col gap-1">
+                {categories.map((category) => (
+                  <button
+                    key={category}
+                    onClick={() => setSelectedCategory(category)}
+                    className={`text-left px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${selectedCategory === category
+                        ? 'bg-primary/10 text-primary'
+                        : 'text-foreground hover:bg-muted/50'
+                      }`}
+                  >
+                    {category}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Decorative Nature Image (Requested by user) */}
@@ -142,7 +152,7 @@ export function Home() {
 
         {/* Main Feed Column */}
         <div className="flex-1 max-w-2xl w-full">
-          
+
           {/* Create Post / Upcoming Text Header */}
           <div className="mb-6 flex items-center justify-between">
             <h1 className="text-2xl font-bold text-foreground">Upcoming Tours Feed</h1>
@@ -150,7 +160,7 @@ export function Home() {
 
           {loading && (
             <div className="space-y-6">
-              {[1,2,3].map(i => (
+              {[1, 2, 3].map(i => (
                 <div key={i} className="animate-pulse bg-card rounded-2xl h-80 border border-border"></div>
               ))}
             </div>
@@ -165,8 +175,8 @@ export function Home() {
               <p className="text-muted-foreground text-sm max-w-sm mx-auto">
                 Try adjusting your search keywords, clearing the date, or selecting a different category.
               </p>
-              <button 
-                onClick={() => {setSearchQuery(''); setSelectedCategory('All'); setSearchDate('');}}
+              <button
+                onClick={() => { setSearchQuery(''); setSelectedCategory('All'); setSearchDate(''); }}
                 className="mt-6 text-primary text-sm font-bold hover:underline"
               >
                 Clear all filters
@@ -192,7 +202,7 @@ export function Home() {
                       {tour.created_by_name || `Guide #${String(tour.created_by).slice(0, 6)}`}
                     </p>
                     <p className="text-xs text-muted-foreground font-medium mt-0.5">
-                      {new Date(tour.date).toLocaleDateString(undefined, {month: 'long', day: 'numeric', year: 'numeric'})} · {tour.location}
+                      {new Date(tour.date).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })} · {tour.location}
                     </p>
                   </div>
                   <div className="flex items-center gap-1.5 bg-accent/10 px-2.5 py-1 rounded-full text-xs font-bold text-accent shrink-0">
@@ -220,10 +230,10 @@ export function Home() {
                     alt={tour.title}
                     className="w-full h-[400px] object-cover"
                   />
-                  
+
                   <div className="absolute bottom-4 left-4 bg-background/90 backdrop-blur-md px-3 py-1.5 rounded-xl shadow-lg border border-border/50">
                     <div className="font-bold text-lg text-foreground flex items-baseline gap-1">
-                      ${tour.price} <span className="text-xs text-muted-foreground font-normal">/ person</span>
+                      ₹{tour.price} <span className="text-xs text-muted-foreground font-normal">/ person</span>
                     </div>
                   </div>
                 </div>
@@ -234,11 +244,11 @@ export function Home() {
                     <MapPin className="w-3.5 h-3.5 text-primary" />
                     <span>{tour.location}</span>
                   </div>
-                  
+
                   <div className="flex items-center gap-2">
                     {bookedTours.includes(tour.id) && (
-                      <div className="flex items-center gap-1.5 text-emerald-600 font-bold text-xs bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200">
-                        <CheckCircle className="w-3.5 h-3.5" /> Booked
+                      <div className="flex items-center gap-1.5 text-amber-600 font-bold text-xs bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-200">
+                        <CheckCircle className="w-3.5 h-3.5" /> Booked {tour.bookings_count || 0}
                       </div>
                     )}
                     <SeatBadge
@@ -257,23 +267,23 @@ export function Home() {
             ))}
           </div>
         </div>
-        
+
         {/* Right Sidebar (Trending/Suggested) */}
         <div className="hidden xl:block w-72 sticky top-24">
-           <div className="bg-card rounded-2xl p-5 border border-border shadow-sm">
-              <h3 className="font-bold text-foreground mb-1">Trending Locations</h3>
-              <p className="text-xs text-muted-foreground mb-4">Popular destinations this month</p>
-              <div className="space-y-3">
-                {['Bali, Indonesia', 'Kyoto, Japan', 'Swiss Alps', 'Santorini, Greece'].map(dest => (
-                  <div key={dest} className="flex items-center gap-3 group cursor-pointer">
-                    <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                       <MapPin className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                    </div>
-                    <div className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">{dest}</div>
+          <div className="bg-card rounded-2xl p-5 border border-border shadow-sm">
+            <h3 className="font-bold text-foreground mb-1">Trending Locations</h3>
+            <p className="text-xs text-muted-foreground mb-4">Popular destinations this month</p>
+            <div className="space-y-3">
+              {['Bali, Indonesia', 'Kyoto, Japan', 'Swiss Alps', 'Santorini, Greece'].map(dest => (
+                <div key={dest} className="flex items-center gap-3 group cursor-pointer">
+                  <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                    <MapPin className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
                   </div>
-                ))}
-              </div>
-           </div>
+                  <div className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">{dest}</div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
       </div>

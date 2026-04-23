@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, MapPin, Users, Clock, Calendar as CalendarIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getTours, getToursByDate } from "../../api/tours";
+import type { Tour } from '../../api/types';
 
 const monthNames = [
   'January','February','March','April','May','June','July','August','September','October','November','December'
@@ -17,8 +18,8 @@ export function CalendarView() {
   const [currentDate, setCurrentDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
-  const [allTours, setAllTours] = useState<any[]>([]);
-  const [selectedDayTours, setSelectedDayTours] = useState<any[]>([]);
+  const [allTours, setAllTours] = useState<Tour[]>([]);
+  const [selectedDayTours, setSelectedDayTours] = useState<Tour[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -66,12 +67,12 @@ export function CalendarView() {
 
   return (
     <div className="bg-background min-h-[calc(100vh-64px)] pb-12 pt-8">
-      <div className="max-w-6xl mx-auto px-8 flex flex-col items-start gap-4 mb-8">
+      <div className="max-w-6xl mx-auto px-4 md:px-8 flex flex-col items-start gap-4 mb-8">
         <h1 className="text-4xl font-bold tracking-tight">Schedule & Availability</h1>
         <p className="text-lg text-muted-foreground max-w-2xl">Plan your upcoming weeks and manage your daily tour commitments efficiently.</p>
       </div>
 
-      <div className="max-w-6xl mx-auto px-8 flex flex-col lg:flex-row gap-12 items-start">
+      <div className="max-w-6xl mx-auto px-4 md:px-8 flex flex-col lg:flex-row gap-12 items-start">
         
         {/* Left Side: Calendar Widget */}
         <div className="w-full lg:w-7/12 bg-card rounded-[2rem] border border-border/50 shadow-sm p-8">
@@ -171,7 +172,7 @@ export function CalendarView() {
                           <MapPin size={14} /> <span className="truncate">{tour.location}</span>
                         </div>
                         <div className="flex justify-between items-center mt-auto">
-                           <div className="font-bold text-primary">${tour.price}</div>
+                           <div className="font-bold text-primary">₹{tour.price}</div>
                            <div className="text-xs bg-background border border-border px-2 py-1 rounded-md text-muted-foreground font-semibold flex items-center gap-1">
                              <Users size={12} /> {tour.max_people}
                            </div>

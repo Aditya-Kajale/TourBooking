@@ -7,13 +7,14 @@ import {
 // ✅ Import the API helper
 import { getTour, deleteTour } from "../../api/tours";
 import { SeatBadge } from '../components/SeatBadge';
+import type { Tour } from '../../api/types';
 
 export function TourDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
 
   // ✅ State Management
-  const [tour, setTour] = useState<any>(null);
+  const [tour, setTour] = useState<Tour | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -274,11 +275,11 @@ export function TourDetail() {
 
         {/* Right Side: Sticky Checkout / Pricing (4 cols) */}
         <div className="lg:col-span-4">
-          <div className="sticky top-24 bg-card border border-border/50 rounded-[2.5rem] p-8 md:p-10 shadow-2xl">
+          <div className="lg:sticky lg:top-24 bg-card border border-border/50 rounded-[2.5rem] p-8 md:p-10 shadow-2xl">
             <div className="text-center mb-8 border-b border-border/50 pb-8">
               <p className="text-sm font-black uppercase tracking-widest text-muted-foreground mb-4">Starting From</p>
               <div className="flex items-baseline justify-center gap-2">
-                <span className="text-6xl font-black tracking-tighter text-primary">${tour.price}</span>
+                <span className="text-4xl lg:text-5xl font-black tracking-tighter text-primary">₹{tour.price}</span>
                 <span className="text-muted-foreground font-bold">/ person</span>
               </div>
             </div>
@@ -312,7 +313,7 @@ export function TourDetail() {
                     <span className="font-bold">You have already booked this tour</span>
                   </div>
                   <span className="text-sm font-semibold opacity-80 bg-amber-500/10 px-3 py-1 rounded-full mt-1">
-                    Seats booked: {tour.bookings_count || 0} / {tour.max_people || 10}
+                    Booked: {tour.bookings_count || 0}
                   </span>
                 </div>
               )}

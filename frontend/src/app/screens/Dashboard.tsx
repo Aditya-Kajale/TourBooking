@@ -4,14 +4,15 @@ import { useNavigate } from 'react-router-dom';
 import { getTours, deleteTour } from "../../api/tours";
 import { apiFetch } from "../../api/client";
 import { SeatBadge } from '../components/SeatBadge';
+import type { Tour, Booking, User } from '../../api/types';
 
 export function Dashboard() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'upcoming' | 'bookings' | 'revenue'>('upcoming');
 
-  const [tours, setTours] = useState<any[]>([]);
-  const [bookings, setBookings] = useState<any[]>([]);
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [tours, setTours] = useState<Tour[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   // ✅ Read user
   useEffect(() => {
@@ -75,16 +76,22 @@ export function Dashboard() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header Area */}
-      <div className="bg-primary px-8 pt-16 pb-24 shadow-sm relative overflow-hidden">
+      <div className="bg-primary px-4 md:px-8 pt-20 pb-24 shadow-sm relative overflow-x-hidden">
         <div className="absolute top-0 left-0 w-full h-full opacity-10 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-white via-transparent to-transparent pointer-events-none" />
-        <div className="max-w-6xl mx-auto relative z-10 flex justify-between items-end">
+        <div className="max-w-6xl mx-auto relative z-10 flex flex-col items-start gap-6 md:flex-row md:justify-between md:items-end">
           <div>
+            <button 
+              onClick={() => navigate(-1)} 
+              className="flex items-center gap-2 text-primary-foreground/80 hover:text-primary-foreground font-semibold mb-6 transition-colors"
+            >
+              ← Back
+            </button>
             <h1 className="mb-2 text-4xl font-bold text-primary-foreground tracking-tight">Guide Dashboard</h1>
             <p className="text-primary-foreground/80 text-lg">Manage your tours and track performance.</p>
           </div>
           <button
             onClick={() => navigate('/add-tour')}
-            className="bg-accent text-accent-foreground px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all"
+            className="w-full md:w-auto bg-accent text-accent-foreground px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all text-center"
           >
             + Create New Tour
           </button>
@@ -92,7 +99,7 @@ export function Dashboard() {
       </div>
 
       {/* Main Content Area */}
-      <div className="max-w-6xl mx-auto px-8 -mt-12 relative z-20 pb-24">
+      <div className="max-w-6xl mx-auto px-4 md:px-8 -mt-12 relative z-20 pb-24">
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
@@ -101,7 +108,7 @@ export function Dashboard() {
               <div className="bg-primary/10 text-primary p-3 rounded-xl"><DollarSign size={24} strokeWidth={2.5} /></div>
               <span className="text-sm font-semibold text-green-600 bg-green-50 px-2 py-1 rounded-md">+12%</span>
             </div>
-            <div className="text-3xl font-bold">${monthlyRevenue || '2,450'}</div>
+            <div className="text-3xl font-bold">₹{monthlyRevenue || '2,450'}</div>
             <div className="text-sm text-muted-foreground mt-1 font-medium">Monthly Revenue</div>
           </div>
 
@@ -126,7 +133,7 @@ export function Dashboard() {
             <div className="flex items-center justify-between mb-4">
               <div className="bg-purple-500/10 text-purple-500 p-3 rounded-xl"><TrendingUp size={24} strokeWidth={2.5} /></div>
             </div>
-            <div className="text-3xl font-bold">${totalRevenue || '12,800'}</div>
+            <div className="text-3xl font-bold">₹{totalRevenue || '12,800'}</div>
             <div className="text-sm text-muted-foreground mt-1 font-medium">Total Earnings Pipeline</div>
           </div>
         </div>
@@ -189,7 +196,7 @@ export function Dashboard() {
                         <div className="flex-1 min-w-0 py-1">
                           <div className="flex justify-between items-start mb-1">
                             <h3 className="font-bold text-xl text-foreground truncate pr-4">{tour.title}</h3>
-                            <div className="font-bold text-lg text-primary">${tour.price}</div>
+                            <div className="font-bold text-lg text-primary">₹{tour.price}</div>
                           </div>
 
                           <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">

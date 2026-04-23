@@ -10,6 +10,7 @@ import { TourDetail } from './screens/TourDetail';
 import { Dashboard } from './screens/Dashboard';
 import { Booking } from './screens/Booking';
 import { Profile } from './screens/Profile';
+import { MyBookings } from './screens/MyBookings';
 
 export const router = createBrowserRouter([
   {
@@ -25,6 +26,7 @@ export const router = createBrowserRouter([
       { path: 'tour/:id', Component: TourDetail },
       { path: 'dashboard', Component: Dashboard },
       { path: 'booking/:id', Component: Booking },
+      { path: 'my-bookings', Component: MyBookings },
       { path: 'profile', Component: Profile },
     ],
   },
