@@ -70,6 +70,16 @@ export function TourDetail() {
   const localBookings = JSON.parse(localStorage.getItem('booked_tours') || '[]');
   const isAlreadyBooked = id ? localBookings.some((t: any) => t.id === id) : false;
 
+  // ✅ Disable body scroll when modal is open
+  useEffect(() => {
+    if (showBookingModal) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => { document.body.style.overflow = 'unset'; };
+  }, [showBookingModal]);
+
   // ✅ Loading View
   if (loading) {
     return (
@@ -347,55 +357,65 @@ export function TourDetail() {
         </div>
       </div>
 
-      {/* Booking Modal (Responsive Slide Up) */}
+      {/* Booking Modal (Responsive Hovering Card) */}
       {showBookingModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center md:items-end justify-center z-[100]" onClick={() => setShowBookingModal(false)}>
-          <div className="bg-background rounded-[3rem] w-full max-w-xl p-10 md:p-12 animate-slide-up shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="w-16 h-1.5 bg-muted/30 rounded-full mx-auto mb-8" />
-            <h2 className="text-4xl font-black tracking-tight mb-4">Make a Reservation</h2>
-            <p className="text-muted-foreground font-medium mb-10">Secure your spot for the {tour.title} experience. You won't be charged until the guide confirms.</p>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-[150] p-4" onClick={() => setShowBookingModal(false)}>
+          <div className="bg-background rounded-[2.5rem] w-full max-w-lg p-8 md:p-10 animate-zoom-in shadow-[0_20px_50px_rgba(0,0,0,0.3)] border border-border/50" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <h2 className="text-2xl font-black tracking-tight mb-1">Make a Reservation</h2>
+                <p className="text-muted-foreground text-sm font-medium">Confirm details to book</p>
+              </div>
+              <button onClick={() => setShowBookingModal(false)} className="w-10 h-10 bg-muted rounded-full flex items-center justify-center text-muted-foreground hover:bg-primary hover:text-white transition-colors">
+                <AlertCircle className="w-5 h-5 rotate-45" />
+              </button>
+            </div>
 
-            <div className="bg-secondary/40 rounded-[2rem] p-8 border border-border/50 mb-10">
-              <div className="flex justify-between items-center mb-4 pb-4 border-b border-border/50 text-xl">
-                <p className="font-bold">Number of Travelers</p>
-                <div className="flex items-center gap-4 bg-background px-4 py-2 rounded-full shadow-inner border border-border/50">
+            <div className="bg-secondary/40 rounded-3xl p-6 border border-border/50 mb-8">
+              <div className="flex justify-between items-center mb-4 pb-4 border-b border-border/50">
+                <p className="font-bold">Travelers</p>
+                <div className="flex items-center gap-4 bg-background px-3 py-1.5 rounded-full shadow-inner border border-border/50">
                   <button
                     onClick={() => setParticipants(Math.max(1, participants - 1))}
-                    className="w-8 h-8 flex items-center justify-center bg-muted hover:bg-primary hover:text-white rounded-full font-bold transition-colors"
+                    className="w-7 h-7 flex items-center justify-center bg-muted hover:bg-primary hover:text-white rounded-full font-bold transition-colors"
                   >-</button>
                   <span className="font-black w-4 text-center">{participants}</span>
                   <button
                     onClick={() => setParticipants(participants + 1)}
-                    className="w-8 h-8 flex items-center justify-center bg-muted hover:bg-primary hover:text-white rounded-full font-bold transition-colors"
+                    className="w-7 h-7 flex items-center justify-center bg-muted hover:bg-primary hover:text-white rounded-full font-bold transition-colors"
                   >+</button>
                 </div>
               </div>
-              <div className="flex justify-between items-center mb-4 pb-4 border-b border-border/50">
-                <p className="font-bold text-lg">Base Price</p>
-                <p className="font-black text-2xl text-primary">${(tour.price * participants).toFixed(2)}</p>
+              
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between items-center text-muted-foreground font-medium">
+                  <p>Price per person</p>
+                  <p>₹{Number(tour.price).toFixed(2)}</p>
+                </div>
+                <div className="flex justify-between items-center text-muted-foreground font-medium">
+                  <p>Service fee (10%)</p>
+                  <p>₹{(Number(tour.price) * participants * 0.1).toFixed(2)}</p>
+                </div>
               </div>
-              <div className="flex justify-between items-center">
-                <p className="font-bold text-muted-foreground">Service Fee</p>
-                <p className="font-bold">${((tour.price * participants) * 0.1).toFixed(2)}</p>
-              </div>
+
               <div className="flex justify-between items-center mt-6 pt-6 border-t-2 border-dashed border-border/50">
-                <p className="font-black text-2xl">Total Payable</p>
-                <p className="font-black text-4xl text-accent">${((tour.price * participants) * 1.1).toFixed(2)}</p>
+                <p className="font-black text-xl">Total Payable</p>
+                <p className="font-black text-2xl text-accent">₹{((Number(tour.price) * participants) * 1.1).toFixed(2)}</p>
               </div>
             </div>
 
-            <div className="flex gap-4">
+            <div className="flex gap-3">
               <button
                 onClick={() => setShowBookingModal(false)}
-                className="flex-1 py-5 rounded-full font-bold text-xl text-muted-foreground hover:bg-muted/20 transition-colors"
+                className="flex-1 py-4 rounded-full font-bold text-muted-foreground hover:bg-muted/50 transition-colors border border-border/50"
               >
                 Cancel
               </button>
               <button
                 onClick={() => navigate(`/booking/${tour.id}`, { state: { participants } })}
-                className="flex-[2] bg-primary text-primary-foreground py-5 rounded-full font-black text-xl shadow-xl shadow-primary/30"
+                className="flex-[2] bg-primary text-primary-foreground py-4 px-6 rounded-full font-black text-lg shadow-xl shadow-primary/30 flex items-center justify-center"
               >
-                Proceed to Checkout
+                Confirm & Pay
               </button>
             </div>
           </div>
@@ -403,8 +423,8 @@ export function TourDetail() {
       )}
 
       <style>{`
-        @keyframes slide-up { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        .animate-slide-up { animation: slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+        @keyframes zoom-in { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .animate-zoom-in { animation: zoom-in 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
       `}</style>
     </div>
   );

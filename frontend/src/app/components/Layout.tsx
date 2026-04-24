@@ -1,19 +1,20 @@
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet } from 'react-router-dom';
 import { BottomNav } from './BottomNav';
+import { Header } from './Header';
 import { Toaster } from 'sonner';
 
 export function Layout() {
-  const location = useLocation();
-  
-  // Hide bottom nav on certain pages
-  const hideBottomNav = location.pathname.startsWith('/tour/') || location.pathname.startsWith('/booking/');
-
   return (
-    <div className="flex flex-col min-h-screen bg-background text-foreground">
-      {!hideBottomNav && <BottomNav />}
-      <div className="flex-1 w-full max-w-7xl mx-auto min-h-screen">
+    <div className="flex flex-col min-h-screen bg-background text-foreground overflow-x-hidden">
+      <Header />
+      
+      {/* Main content area */}
+      <div className="flex-1 w-full max-w-7xl mx-auto pt-16 pb-32 md:pb-0 relative">
         <Outlet />
       </div>
+      
+      {/* Floating Navigation (Mobile Only) */}
+      <BottomNav />
       <Toaster position="top-center" />
     </div>
   );

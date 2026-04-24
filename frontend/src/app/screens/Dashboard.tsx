@@ -74,18 +74,12 @@ export function Dashboard() {
   const totalParticipants = 0;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="bg-background">
       {/* Header Area */}
-      <div className="bg-primary px-4 md:px-8 pt-20 pb-24 shadow-sm relative overflow-x-hidden">
+      <div className="bg-primary px-4 md:px-8 pt-24 md:pt-20 pb-24 shadow-sm relative overflow-x-hidden">
         <div className="absolute top-0 left-0 w-full h-full opacity-10 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-white via-transparent to-transparent pointer-events-none" />
         <div className="max-w-6xl mx-auto relative z-10 flex flex-col items-start gap-6 md:flex-row md:justify-between md:items-end">
           <div>
-            <button 
-              onClick={() => navigate(-1)} 
-              className="flex items-center gap-2 text-primary-foreground/80 hover:text-primary-foreground font-semibold mb-6 transition-colors"
-            >
-              ← Back
-            </button>
             <h1 className="mb-2 text-4xl font-bold text-primary-foreground tracking-tight">Guide Dashboard</h1>
             <p className="text-primary-foreground/80 text-lg">Manage your tours and track performance.</p>
           </div>
@@ -99,7 +93,7 @@ export function Dashboard() {
       </div>
 
       {/* Main Content Area */}
-      <div className="max-w-6xl mx-auto px-4 md:px-8 -mt-12 relative z-20 pb-24">
+      <div className="max-w-6xl mx-auto px-4 md:px-8 -mt-8 md:-mt-12 relative z-20 pb-24">
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
@@ -147,7 +141,7 @@ export function Dashboard() {
               <h2 className="text-2xl font-bold text-foreground">Your Schedule</h2>
 
               {/* Tabs */}
-              <div className="flex gap-2 bg-secondary p-1 rounded-xl">
+              <div className="flex gap-2 bg-secondary p-1 rounded-xl overflow-x-auto no-scrollbar scroll-smooth whitespace-nowrap max-w-full">
                 {['upcoming', 'bookings', 'revenue'].map((tab) => (
                   <button
                     key={tab}

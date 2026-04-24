@@ -318,7 +318,7 @@ export function Booking() {
       )}
 
       {/* Bottom Bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-card/80 backdrop-blur-xl border-t border-border/50 p-5 z-50 pb-8">
+      <div className="fixed bottom-0 left-0 right-0 bg-card/80 backdrop-blur-xl border-t border-border/50 p-5 z-50 pb-28 md:pb-8">
         <div className="max-w-md mx-auto">
           <div className="mb-5 space-y-2.5 text-sm">
             <div className="flex justify-between text-muted-foreground font-medium">

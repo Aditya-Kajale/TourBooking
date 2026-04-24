@@ -32,7 +32,7 @@ export function Profile() {
   return (
     <div className="min-h-screen bg-background pb-32">
       {/* Enhanced Header Area with Nature Background Image */}
-      <div className="relative px-4 md:px-8 pt-20 pb-28 shadow-sm overflow-hidden bg-primary">
+      <div className="relative px-4 md:px-8 pt-24 md:pt-20 pb-28 shadow-sm overflow-hidden bg-primary">
         {/* Nature Background - fallback to Unsplash forest */}
         <div className="absolute inset-0 z-0">
           <img
@@ -57,7 +57,7 @@ export function Profile() {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 md:px-8 -mt-12 relative z-20 pb-24">
+      <div className="max-w-4xl mx-auto px-4 md:px-8 -mt-8 md:-mt-12 relative z-20 pb-24">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
           {/* Info Cards */}

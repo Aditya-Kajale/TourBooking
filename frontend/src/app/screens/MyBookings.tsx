@@ -84,18 +84,11 @@ export function MyBookings() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="bg-background">
       {/* Header */}
-      <div className="bg-primary px-4 md:px-8 pt-20 pb-28 shadow-sm relative overflow-x-hidden">
+      <div className="bg-primary px-4 md:px-8 pt-24 md:pt-20 pb-28 shadow-sm relative overflow-x-hidden">
         <div className="absolute top-0 left-0 w-full h-full opacity-10 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-white via-transparent to-transparent pointer-events-none" />
         <div className="max-w-6xl mx-auto relative z-10">
-          {/* Back Button */}
-          <button 
-            onClick={() => navigate(-1)} 
-            className="flex items-center gap-2 text-primary-foreground/80 hover:text-primary-foreground font-semibold mb-6 transition-colors"
-          >
-            ← Back
-          </button>
           <div className="flex items-center gap-3 mb-3">
             <div className="w-12 h-12 bg-white/10 backdrop-blur-xl rounded-2xl flex items-center justify-center border border-white/20">
               <Ticket className="w-6 h-6 text-white" />
@@ -108,7 +101,7 @@ export function MyBookings() {
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 md:px-8 -mt-14 relative z-20 pb-24">
+      <div className="max-w-6xl mx-auto px-4 md:px-8 -mt-10 md:-mt-14 relative z-20 pb-24">
 
         {/* Stats Widgets */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
@@ -146,7 +139,7 @@ export function MyBookings() {
         {/* Filter Tabs */}
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-bold text-foreground">Your Reservations</h2>
-          <div className="flex gap-2 bg-secondary p-1 rounded-xl">
+          <div className="flex gap-2 bg-secondary p-1 rounded-xl overflow-x-auto no-scrollbar scroll-smooth whitespace-nowrap max-w-full">
             {(['all', 'pending', 'confirmed', 'cancelled'] as const).map((tab) => (
               <button
                 key={tab}
