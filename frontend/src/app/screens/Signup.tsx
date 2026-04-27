@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
 
 export function Signup() {
   const [username, setUsername] = useState('');
@@ -8,26 +9,17 @@ export function Signup() {
   const [isGuide, setIsGuide] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const { register } = useAuth();
 
   const handleSubmit = async (e: any) => {
     e.preventDefault();
     setError(null);
-    try {
-      const res = await fetch('http://127.0.0.1:8000/api/register/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password, email, is_guide: isGuide }),
-      });
+    const res = await register({ username, password, email, is_guide: isGuide });
 
-      if (res.ok) {
-        // auto-login by navigating back to login
-        navigate('/');
-      } else {
-        const txt = await res.text();
-        setError(txt || 'Failed to create account');
-      }
-    } catch (err) {
-      setError('Request failed');
+    if (res.ok) {
+      navigate('/home');
+    } else {
+      setError(res.error || 'Failed to create account');
     }
   };
 

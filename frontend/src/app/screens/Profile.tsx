@@ -1,33 +1,53 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { logout } from '../../api/auth';
-import { User, LogOut, Mail, CircleUserRound, Calendar } from 'lucide-react';
-import type { User as AppUser } from '../../api/types';
+import { User, Mail, MapPin, Calendar, Shield, LogOut, CircleUserRound } from 'lucide-react';
+import { useAuth } from '../hooks/useAuth';
+import { apiFetch } from '../../api/client';
+import { Booking } from '../../api/types';
 
 export function Profile() {
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [user, setUser] = useState<AppUser | null>(null);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const raw = localStorage.getItem('user');
-    if (!raw) {
-      navigate('/');
-      return;
+    const fetchBookings = async () => {
+      try {
+        const data = await apiFetch<Booking[]>('/api/bookings/');
+        setBookings(data);
+      } catch (err) {
+        console.error('Failed to fetch bookings', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (user) {
+      fetchBookings();
     }
-    try {
-      const parsed = JSON.parse(raw);
-      setUser(parsed);
-    } catch {
-      navigate('/');
-    }
-  }, [navigate]);
+  }, [user]);
 
   const handleLogout = async () => {
     await logout();
     navigate('/login');
   };
 
-  if (!user) return null;
+  if (!user) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center p-8 text-center">
+        <Shield className="w-16 h-16 text-muted-foreground/20 mb-4" />
+        <h2 className="text-2xl font-bold mb-2">Not Logged In</h2>
+        <p className="text-muted-foreground mb-6">Please sign in to view your profile and adventures.</p>
+        <button 
+          onClick={() => navigate('/login')}
+          className="px-8 py-3 bg-primary text-primary-foreground rounded-full font-bold shadow-lg hover:shadow-xl transition-all"
+        >
+          Sign In
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background pb-32">

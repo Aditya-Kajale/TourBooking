@@ -18,6 +18,7 @@ urlpatterns = [
     path('api/me/', users_views.me),
     path('api/login/', users_views.login_view),
     path('api/register/', users_views.register_view),
+    path('api/refresh-token/', users_views.token_refresh_view),
     path('api/logout/', users_views.logout_view),
 ]
 

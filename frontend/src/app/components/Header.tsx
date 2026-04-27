@@ -2,22 +2,20 @@ import { User } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ThemeToggle } from './ThemeToggle';
 import { Home, Calendar, PlusCircle, LayoutDashboard, Ticket } from 'lucide-react';
+import { useAuth } from '../hooks/useAuth';
 
 export function Header() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
-  const raw = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
-  if (!raw) return null;
-
-  let user: any = null;
-  try { user = JSON.parse(raw); } catch { user = null; }
+  if (!user) return null;
 
   const mainNavItems = [
     { icon: Home, label: 'Home', path: '/' },
     { icon: Calendar, label: 'Calendar', path: '/calendar' },
     { icon: Ticket, label: 'Bookings', path: '/my-bookings' },
-    ...(user && user.is_guide ? [{ icon: PlusCircle, label: 'Add', path: '/add-tour' }] : []),
+    ...(user.is_guide ? [{ icon: PlusCircle, label: 'Add', path: '/add-tour' }] : []),
     { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
   ];
 

@@ -1,52 +1,78 @@
-import { useEffect, useState } from 'react';
-import { Search, MapPin, SlidersHorizontal, Star, X } from 'lucide-react';
+import { useEffect, useState, useCallback } from 'react';
+import { Search, MapPin, SlidersHorizontal, Star, X, Loader2, ChevronDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { getTours } from "../../api/tours";
+import { getToursPaginated, type ToursResponse } from "../../api/tours";
 import { SeatBadge } from '../components/SeatBadge';
-import type { Tour, User } from '../../api/types';
+import type { Tour } from '../../api/types';
+import { useAuth } from '../hooks/useAuth';
 
 export function Home() {
   const navigate = useNavigate();
+  const { user: currentUser } = useAuth();
 
   const [tours, setTours] = useState<Tour[]>([]);
   const [loading, setLoading] = useState(true);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  const [page, setPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [searchDate, setSearchDate] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [showFilters, setShowFilters] = useState(false);
 
+  // Debounced search
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   useEffect(() => {
-    const fetchTours = async () => {
-      try {
-        const data = await getTours();
-        setTours(data);
-      } catch (err) {
-        console.error("Failed to fetch tours:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchTours();
+    const timer = setTimeout(() => setDebouncedSearch(searchQuery), 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const fetchTours = useCallback(async (pageNum: number, append = false) => {
+    if (!append) setLoading(true);
+    else setLoadingMore(true);
 
     try {
-      const raw = localStorage.getItem('user');
-      if (raw) setCurrentUser(JSON.parse(raw));
-    } catch { }
-  }, []);
+      const res = await getToursPaginated({
+        page: pageNum,
+        page_size: 12,
+        search: debouncedSearch || undefined,
+        category: selectedCategory !== 'All' ? selectedCategory : undefined,
+        date: searchDate || undefined,
+        upcoming: true,
+        exclude_user: currentUser?.id || undefined,
+        ordering: '-created_at',
+      });
+
+      if (append) {
+        setTours(prev => [...prev, ...res.results]);
+      } else {
+        setTours(res.results);
+      }
+      setHasMore(!!res.next);
+      setTotalCount(res.count);
+    } catch (err) {
+      console.error("Failed to fetch tours:", err);
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
+  }, [debouncedSearch, selectedCategory, searchDate, currentUser?.id]);
+
+  // Re-fetch on filter change
+  useEffect(() => {
+    setPage(1);
+    fetchTours(1, false);
+  }, [fetchTours]);
+
+  const loadMore = () => {
+    const nextPage = page + 1;
+    setPage(nextPage);
+    fetchTours(nextPage, true);
+  };
 
   const categories = ['All', 'Adventure', 'Culture', 'Food', 'Relaxation'];
-
-  const filteredTours = tours.filter((tour) => {
-    const todayStr = new Date().toISOString().split('T')[0];
-    const isUpcoming = tour.date >= todayStr;
-    const matchesSearch = !searchQuery || (tour.title?.toLowerCase() || "").includes(searchQuery.toLowerCase()) || (tour.location?.toLowerCase() || "").includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === 'All' || (tour.category && tour.category === selectedCategory);
-    const matchesDate = !searchDate || tour.date === searchDate;
-    const isOwnTour = currentUser && String(tour.created_by) === String(currentUser.id);
-    return isUpcoming && !isOwnTour && matchesSearch && matchesCategory && matchesDate;
-  });
 
   return (
     <div className="min-h-screen bg-background text-foreground pb-32 overflow-x-hidden">
@@ -131,14 +157,16 @@ export function Home() {
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-6 duration-700 delay-200">
           <div className="flex items-center justify-between px-1 mb-2">
             <h2 className="text-lg font-bold">Recommended for you</h2>
-            <p className="text-[10px] font-bold text-primary uppercase tracking-widest cursor-pointer hover:underline">See all</p>
+            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+              {totalCount} tour{totalCount !== 1 ? 's' : ''}
+            </p>
           </div>
 
           {loading ? (
             [1, 2, 3].map(i => (
               <div key={i} className="animate-pulse bg-card rounded-[2rem] h-64 border border-border/40"></div>
             ))
-          ) : filteredTours.length === 0 ? (
+          ) : tours.length === 0 ? (
             <div className="bg-card border border-border/40 rounded-[2rem] p-12 text-center shadow-sm">
                <p className="text-muted-foreground font-medium text-sm">No tours found matching your filters.</p>
                {(searchQuery || searchDate || selectedCategory !== 'All') && (
@@ -151,45 +179,65 @@ export function Home() {
                )}
             </div>
           ) : (
-            filteredTours.map((tour) => (
-              <div
-                key={tour.id}
-                onClick={() => navigate(`/tour/${tour.id}`)}
-                className="bg-card rounded-[2.5rem] border border-border/40 overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:shadow-[0_12px_40px_rgba(0,0,0,0.08)] cursor-pointer transition-all group"
-              >
-                <div className="relative aspect-[4/3]">
-                  <img
-                    src={tour.image ? (tour.image.startsWith('http') ? tour.image : `http://127.0.0.1:8000${tour.image}`) : `https://source.unsplash.com/featured/?${tour.location}`}
-                    alt={tour.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                  />
-                  <div className="absolute top-4 right-4 bg-background/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/20 shadow-sm flex items-center gap-1">
-                    <Star className="w-3.5 h-3.5 fill-accent text-accent" />
-                    <span className="text-xs font-bold">4.8</span>
-                  </div>
-                  <div className="absolute bottom-4 left-4 right-4 translate-y-1 group-hover:translate-y-0 transition-transform duration-500">
-                     <div className="bg-background/80 backdrop-blur-xl p-4 rounded-3xl border border-white/20 shadow-lg">
-                        <div className="flex justify-between items-start gap-2">
-                           <div className="min-w-0">
-                              <h3 className="font-bold text-base truncate mb-1 text-foreground">{tour.title}</h3>
-                              <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-bold uppercase">
-                                 <MapPin size={10} className="text-primary" /> {tour.location}
-                              </div>
-                           </div>
-                           <div className="shrink-0 text-right">
-                              <div className="font-bold text-primary text-lg tracking-tight">₹{tour.price}</div>
-                              <div className="text-[9px] text-muted-foreground font-bold uppercase tracking-wider">Per Person</div>
-                           </div>
-                        </div>
-                        <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border/50">
-                           <SeatBadge max_people={tour.max_people} bookings_count={tour.bookings_count} is_housefull={tour.is_housefull} />
-                           <div className="text-[9px] font-bold text-muted-foreground bg-secondary px-2 py-1 rounded-md uppercase tracking-widest">{tour.category}</div>
-                        </div>
-                     </div>
+            <>
+              {tours.map((tour) => (
+                <div
+                  key={tour.id}
+                  onClick={() => navigate(`/tour/${tour.id}`)}
+                  className="bg-card rounded-[2.5rem] border border-border/40 overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:shadow-[0_12px_40px_rgba(0,0,0,0.08)] cursor-pointer transition-all group"
+                >
+                  <div className="relative aspect-[4/3]">
+                    <img
+                      src={tour.image ? (tour.image.startsWith('http') ? tour.image : `http://127.0.0.1:8000${tour.image}`) : `https://source.unsplash.com/featured/?${tour.location}`}
+                      alt={tour.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                    />
+                    <div className="absolute top-4 right-4 bg-background/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/20 shadow-sm flex items-center gap-1">
+                      <Star className="w-3.5 h-3.5 fill-accent text-accent" />
+                      <span className="text-xs font-bold">4.8</span>
+                    </div>
+                    <div className="absolute bottom-4 left-4 right-4 translate-y-1 group-hover:translate-y-0 transition-transform duration-500">
+                       <div className="bg-background/80 backdrop-blur-xl p-4 rounded-3xl border border-white/20 shadow-lg">
+                          <div className="flex justify-between items-start gap-2">
+                             <div className="min-w-0">
+                                <h3 className="font-bold text-base truncate mb-1 text-foreground">{tour.title}</h3>
+                                <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-bold uppercase">
+                                   <MapPin size={10} className="text-primary" /> {tour.location}
+                                </div>
+                             </div>
+                             <div className="shrink-0 text-right">
+                                <div className="font-bold text-primary text-lg tracking-tight">₹{tour.price}</div>
+                                <div className="text-[9px] text-muted-foreground font-bold uppercase tracking-wider">Per Person</div>
+                             </div>
+                          </div>
+                          <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border/50">
+                             <SeatBadge max_people={tour.max_people} bookings_count={tour.bookings_count} is_housefull={tour.is_housefull} />
+                             <div className="text-[9px] font-bold text-muted-foreground bg-secondary px-2 py-1 rounded-md uppercase tracking-widest">{tour.category}</div>
+                          </div>
+                       </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))
+              ))}
+
+              {/* Load More Button */}
+              {hasMore && (
+                <button
+                  onClick={loadMore}
+                  disabled={loadingMore}
+                  className="w-full py-4 bg-card border border-border/50 rounded-full font-bold text-sm text-muted-foreground hover:text-foreground hover:border-primary/30 transition-all flex items-center justify-center gap-2 shadow-sm"
+                >
+                  {loadingMore ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <>
+                      <ChevronDown className="h-4 w-4" />
+                      Load More
+                    </>
+                  )}
+                </button>
+              )}
+            </>
           )}
         </div>
       </div>

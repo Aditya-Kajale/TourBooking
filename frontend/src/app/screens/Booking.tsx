@@ -61,29 +61,67 @@ export function Booking() {
   const serviceFee = Math.round(subtotal * 0.1);
   const total = subtotal + serviceFee;
 
+  const [isProcessing, setIsProcessing] = useState(false);
+
   const handlePayment = async () => {
-    toast.success('Processing payment...');
-    try {
-      await createBooking({
-        tour: tour.id,
-        participants,
-        date: tour.date,
-        total_price: total,
-        participant_details: participants > 1 ? participantDetails : [],
-        status: 'confirmed',
-        payment_status: 'paid',
-        payment_method: paymentMethod
-      });
-      
-      const bookedTours = JSON.parse(localStorage.getItem('booked_tours') || '[]');
-      if (!bookedTours.find((t: any) => t.id === tour.id)) {
-        bookedTours.push(tour);
-        localStorage.setItem('booked_tours', JSON.stringify(bookedTours));
-      }
-      setStep('success');
-    } catch (err: any) {
-      toast.error(err.message || 'Payment failed. Please try again.');
+    if (isProcessing) return;
+
+    // Front-end overbooking guard
+    if (participants > slotsLeft) {
+      toast.error(`Only ${slotsLeft} seat(s) available. Please reduce participants.`);
+      return;
     }
+
+    setIsProcessing(true);
+
+    // Optimistic: show success immediately
+    setStep('success');
+    toast.success('Booking confirmed!');
+
+    // Persist to localStorage optimistically
+    const bookedTours = JSON.parse(localStorage.getItem('booked_tours') || '[]');
+    if (!bookedTours.find((t: any) => t.id === tour.id)) {
+      bookedTours.push(tour);
+      localStorage.setItem('booked_tours', JSON.stringify(bookedTours));
+    }
+
+    // Retry logic: up to 3 attempts with exponential backoff
+    const MAX_RETRIES = 3;
+    let lastError: any = null;
+
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        await createBooking({
+          tour: tour.id,
+          participants,
+          date: tour.date,
+          total_price: total,
+          participant_details: participants > 1 ? participantDetails : [],
+          status: 'confirmed',
+          payment_status: 'paid',
+          payment_method: paymentMethod
+        });
+        setIsProcessing(false);
+        return; // Success — exit
+      } catch (err: any) {
+        lastError = err;
+        if (attempt < MAX_RETRIES) {
+          // Exponential backoff: 1s, 2s
+          await new Promise(r => setTimeout(r, 1000 * attempt));
+        }
+      }
+    }
+
+    // All retries failed — rollback optimistic state
+    setStep('payment');
+    setIsProcessing(false);
+
+    // Remove from localStorage
+    const updated = JSON.parse(localStorage.getItem('booked_tours') || '[]')
+      .filter((t: any) => t.id !== tour.id);
+    localStorage.setItem('booked_tours', JSON.stringify(updated));
+
+    toast.error(lastError?.message || 'Booking failed after multiple attempts. Please try again.');
   };
 
   if (step === 'success') {
@@ -352,9 +390,17 @@ export function Booking() {
           ) : (
             <button
               onClick={handlePayment}
-              className="w-full bg-primary text-primary-foreground py-4 rounded-full hover:opacity-90 transition-opacity shadow-[0_4px_14px_rgba(43,92,67,0.3)] font-semibold text-lg"
+              disabled={isProcessing}
+              className="w-full bg-primary text-primary-foreground py-4 rounded-full hover:opacity-90 transition-opacity shadow-[0_4px_14px_rgba(43,92,67,0.3)] font-semibold text-lg disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              Pay ₹{total}
+              {isProcessing ? (
+                <>
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                `Pay ₹${total}`
+              )}
             </button>
           )}
         </div>

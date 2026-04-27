@@ -1,21 +1,22 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { login } from '../../api/auth';
+import { useAuth } from '../hooks/useAuth';
 
 export function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleSubmit = async (e: any) => {
     e.preventDefault();
     setError(null);
     const res = await login(username, password);
     if (res.ok) {
-      navigate('/profile');
+      navigate('/home');
     } else {
-      setError('Login failed');
+      setError(res.error || 'Login failed');
     }
   };
 
