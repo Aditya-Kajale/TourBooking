@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { getTour } from '../../api/tours';
 import { createBooking } from '../../api/bookings';
 import type { Tour } from '../../api/types';
+import { useTourSeats } from '../hooks/useTourSeats';
 
 export function Booking() {
   const { id } = useParams();
@@ -53,9 +54,13 @@ export function Booking() {
     );
   }
 
-  // Housefull check
-  const slotsLeft = Math.max(0, (tour.max_people || 10) - (tour.bookings_count || 0));
-  const isHousefull = tour.is_housefull || slotsLeft === 0;
+  // ✅ Real-time Housefull check via SSE
+  const { seatInfo } = useTourSeats(tour.id);
+  const currentMaxPeople = seatInfo?.max_people ?? tour.max_people ?? 10;
+  const currentBookingsCount = seatInfo?.bookings_count ?? tour.bookings_count ?? 0;
+  
+  const slotsLeft = Math.max(0, currentMaxPeople - currentBookingsCount);
+  const isHousefull = (seatInfo?.is_housefull ?? tour.is_housefull) || slotsLeft === 0;
 
   const subtotal = tour.price * participants;
   const serviceFee = Math.round(subtotal * 0.1);
@@ -178,18 +183,23 @@ export function Booking() {
   }
 
   // Housefull screen
-  if (isHousefull) {
+  if (isHousefull || participants > slotsLeft) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-6 px-6 text-center">
         <div className="w-24 h-24 bg-destructive/10 rounded-full flex items-center justify-center">
           <Users className="h-12 w-12 text-destructive" />
         </div>
-        <h1 className="text-3xl font-bold text-foreground">Housefull!</h1>
+        <h1 className="text-3xl font-bold text-foreground">
+          {isHousefull ? 'Housefull!' : 'Not enough seats left!'}
+        </h1>
         <p className="text-muted-foreground text-lg max-w-sm">
-          All spots for <span className="font-semibold text-foreground">"{tour.title}"</span> have been filled. Check out other available tours.
+          {isHousefull 
+            ? `All spots for "${tour.title}" have been filled.` 
+            : `Only ${slotsLeft} seat(s) remain for "${tour.title}", but you selected ${participants}.`}
+          Check out other available tours or reduce participants.
         </p>
-        <button onClick={() => navigate('/')} className="px-8 py-3 bg-primary text-primary-foreground rounded-full font-bold hover:opacity-90 transition-opacity shadow-md">
-          Browse Other Tours
+        <button onClick={() => navigate(-1)} className="px-8 py-3 bg-primary text-primary-foreground rounded-full font-bold hover:opacity-90 transition-opacity shadow-md">
+          Go Back
         </button>
       </div>
     );

@@ -8,6 +8,7 @@ import {
 import { getTour, deleteTour } from "../../api/tours";
 import { SeatBadge } from '../components/SeatBadge';
 import type { Tour } from '../../api/types';
+import { useTourSeats } from '../hooks/useTourSeats';
 
 export function TourDetail() {
   const { id } = useParams();
@@ -20,6 +21,13 @@ export function TourDetail() {
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [participants, setParticipants] = useState(1);
+
+  // ✅ Real-time Seat Info
+  const { seatInfo } = useTourSeats(tour?.id);
+  const currentMaxPeople = seatInfo?.max_people ?? tour?.max_people ?? 10;
+  const currentBookingsCount = seatInfo?.bookings_count ?? tour?.bookings_count ?? 0;
+  const currentIsHousefull = seatInfo?.is_housefull ?? tour?.is_housefull ?? false;
+  const currentAvailableSeats = seatInfo?.available_seats ?? Math.max(0, currentMaxPeople - currentBookingsCount);
 
   const handleDelete = async () => {
     if (!id) return;
@@ -196,7 +204,7 @@ export function TourDetail() {
             {[
               { icon: Calendar, label: 'Date', val: new Date(tour.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) },
               { icon: Clock, label: 'Duration', val: tour.duration || "Full Day" },
-              { icon: Users, label: 'Group Size', val: `Max ${tour.max_people || 10}` },
+              { icon: Users, label: 'Group Size', val: `Max ${currentMaxPeople}` },
             ].map((stat, i) => (
               <div key={i} className="bg-card border border-border/50 rounded-3xl p-6 shadow-sm hover:shadow-md transition-shadow group">
                 <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
@@ -213,9 +221,9 @@ export function TourDetail() {
               </div>
               <p className="text-xs font-black uppercase tracking-widest text-muted-foreground/60 mb-2">Seats</p>
               <SeatBadge
-                max_people={tour.max_people || 10}
-                bookings_count={tour.bookings_count || 0}
-                is_housefull={tour.is_housefull}
+                max_people={currentMaxPeople}
+                bookings_count={currentBookingsCount}
+                is_housefull={currentIsHousefull}
                 size="md"
               />
             </div>
@@ -302,16 +310,18 @@ export function TourDetail() {
                   </div>
                   <span className="font-bold">Group Size</span>
                 </div>
-                <span className="font-black text-foreground">Up to {tour.max_people || 10}</span>
+                <span className="font-black text-foreground">Up to {currentMaxPeople}</span>
               </div>
               <div className="flex justify-between items-center bg-secondary/30 p-4 rounded-2xl">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-background rounded-xl shadow-sm flex items-center justify-center">
-                    <Check className="h-5 w-5 text-primary" />
+                  <div className={`w-10 h-10 ${currentIsHousefull ? 'bg-destructive/10' : 'bg-background'} rounded-xl shadow-sm flex items-center justify-center`}>
+                    <Check className={`h-5 w-5 ${currentIsHousefull ? 'text-destructive' : 'text-primary'}`} />
                   </div>
                   <span className="font-bold">Availability</span>
                 </div>
-                <span className="text-green-600 font-black">Live & Open</span>
+                <span className={`${currentIsHousefull ? 'text-destructive' : 'text-green-600'} font-black`}>
+                  {currentIsHousefull ? 'Housefull' : `${currentAvailableSeats} seats left`}
+                </span>
               </div>
             </div>
 
@@ -330,10 +340,21 @@ export function TourDetail() {
               {tour.created_by !== currentUserId ? (
                 <>
                   <button
-                    onClick={() => setShowBookingModal(true)}
-                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground py-6 rounded-full font-black text-2xl shadow-xl shadow-primary/30 hover:-translate-y-1 active:scale-[0.98] transition-all"
+                    onClick={() => {
+                      if (currentIsHousefull) {
+                        alert("Sorry, this tour is fully booked.");
+                        return;
+                      }
+                      setShowBookingModal(true);
+                    }}
+                    disabled={currentIsHousefull}
+                    className={`w-full py-6 rounded-full font-black text-2xl shadow-xl transition-all ${
+                      currentIsHousefull 
+                        ? 'bg-muted text-muted-foreground cursor-not-allowed' 
+                        : 'bg-primary hover:bg-primary/90 text-primary-foreground shadow-primary/30 hover:-translate-y-1 active:scale-[0.98]'
+                    }`}
                   >
-                    Check Availability
+                    {currentIsHousefull ? 'Housefull' : 'Check Availability'}
                   </button>
                   <button
                     onClick={handleWhatsAppClick}

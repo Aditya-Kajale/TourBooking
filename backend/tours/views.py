@@ -7,6 +7,10 @@ from rest_framework.response import Response
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django.db.models import Sum, F, Value, IntegerField
 from django.db.models.functions import Coalesce
+from django.http import StreamingHttpResponse
+from asgiref.sync import sync_to_async
+import asyncio
+import json
 from .models import Tour
 from .serializers import TourSerializer
 
@@ -78,3 +82,41 @@ class TourViewSet(viewsets.ModelViewSet):
         logger.info('Tour deleted id=%s by user=%s', instance.id, request.user)
         self.perform_destroy(instance)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+@sync_to_async
+def get_tour_seat_info(tour_id):
+    try:
+        tour = Tour.objects.get(pk=tour_id)
+        booked_agg = tour.booking_set.exclude(status='cancelled').aggregate(total=Sum('participants'))
+        booked_count = booked_agg['total'] or 0
+        return {
+            'max_people': tour.max_people,
+            'bookings_count': booked_count,
+            'is_housefull': booked_count >= tour.max_people,
+            'available_seats': max(tour.max_people - booked_count, 0)
+        }
+    except Tour.DoesNotExist:
+        return None
+
+async def tour_seats_stream(request, pk):
+    """
+    Server-Sent Events endpoint that pushes real-time updates for seat availability.
+    """
+    async def event_stream():
+        last_state = None
+        while True:
+            current_state = await get_tour_seat_info(pk)
+            if current_state is None:
+                yield "event: error\ndata: Tour not found\n\n"
+                break
+            
+            if current_state != last_state:
+                yield f"data: {json.dumps(current_state)}\n\n"
+                last_state = current_state
+            
+            await asyncio.sleep(2)
+
+    response = StreamingHttpResponse(event_stream(), content_type='text/event-stream')
+    response['Cache-Control'] = 'no-cache'
+    response['X-Accel-Buffering'] = 'no'
+    return response
