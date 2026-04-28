@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Calendar, DollarSign, Users, TrendingUp, MapPin, Clock, Trash2 } from 'lucide-react';
+import { Calendar, DollarSign, Users, TrendingUp, MapPin, Clock, Trash2, FileText } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getTours, deleteTour } from "../../api/tours";
 import { apiFetch } from "../../api/client";

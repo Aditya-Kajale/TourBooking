@@ -194,7 +194,7 @@ export function Home() {
                     />
                     <div className="absolute top-4 right-4 bg-background/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/20 shadow-sm flex items-center gap-1">
                       <Star className="w-3.5 h-3.5 fill-accent text-accent" />
-                      <span className="text-xs font-bold">4.8</span>
+                      <span className="text-xs font-bold">{tour.average_rating > 0 ? tour.average_rating : "New"}</span>
                     </div>
                     <div className="absolute bottom-4 left-4 right-4 translate-y-1 group-hover:translate-y-0 transition-transform duration-500">
                        <div className="bg-background/80 backdrop-blur-xl p-4 rounded-3xl border border-white/20 shadow-lg">

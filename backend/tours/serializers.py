@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from django.db.models import Sum
+from django.db.models import Sum, Avg
 from .models import Tour
 
 class TourSerializer(serializers.ModelSerializer):
@@ -7,6 +7,8 @@ class TourSerializer(serializers.ModelSerializer):
     bookings_count = serializers.SerializerMethodField()
     is_housefull = serializers.SerializerMethodField()
     available_seats = serializers.SerializerMethodField()
+    average_rating = serializers.SerializerMethodField()
+    review_count = serializers.SerializerMethodField()
 
     def get_created_by_name(self, obj):
         try:
@@ -40,6 +42,20 @@ class TourSerializer(serializers.ModelSerializer):
             return max(remaining, 0)
         except Exception:
             return obj.max_people
+
+    def get_average_rating(self, obj):
+        try:
+            # Only count approved reviews
+            result = obj.review_set.filter(is_approved=True).aggregate(avg=Avg('rating'))
+            return round(result['avg'], 1) if result['avg'] else 0
+        except Exception:
+            return 0
+
+    def get_review_count(self, obj):
+        try:
+            return obj.review_set.filter(is_approved=True).count()
+        except Exception:
+            return 0
 
     def validate_date(self, value):
         from datetime import date
@@ -78,6 +94,8 @@ class TourSerializer(serializers.ModelSerializer):
     'bookings_count',
     'is_housefull',
     'available_seats',
+    'average_rating',
+    'review_count',
     'created_at'
 ]
-        read_only_fields = ['created_by', 'created_by_name', 'bookings_count', 'is_housefull', 'available_seats']
+        read_only_fields = ['created_by', 'created_by_name', 'bookings_count', 'is_housefull', 'available_seats', 'average_rating', 'review_count']

@@ -7,6 +7,7 @@ import {
 // ✅ Import the API helper
 import { getTour, deleteTour } from "../../api/tours";
 import { SeatBadge } from '../components/SeatBadge';
+import { ReviewSection } from '../components/ReviewSection';
 import type { Tour } from '../../api/types';
 import { useTourSeats } from '../hooks/useTourSeats';
 
@@ -68,11 +69,16 @@ export function TourDetail() {
 
   const guide = tour ? guides.find((g) => g.id === tour.guideId) : null;
   const tourReviews = tour ? reviews.filter((r) => r.tourId === tour.id) : [];
-  // detect current user id from localStorage
+  // detect current user id and staff status from localStorage
   let currentUserId: string | null = null;
+  let isStaff = false;
   try {
     const raw = localStorage.getItem('user');
-    if (raw) currentUserId = JSON.parse(raw).id;
+    if (raw) {
+      const user = JSON.parse(raw);
+      currentUserId = user.id;
+      isStaff = !!user.is_staff || !!user.is_superuser;
+    }
   } catch { }
 
   const localBookings = JSON.parse(localStorage.getItem('booked_tours') || '[]');
@@ -172,7 +178,7 @@ export function TourDetail() {
                 <span className="bg-accent text-accent-foreground px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest shadow-lg">{tour.category || 'Adventure'}</span>
                 <div className="flex items-center gap-1.5 bg-white/20 backdrop-blur-md text-white px-3 py-1.5 rounded-full border border-white/10">
                   <Star className="h-4 w-4 fill-accent text-accent" />
-                  <span className="font-bold">{tour.rating || "4.8"}</span>
+                  <span className="font-bold">{tour.average_rating || "0.0"} ({tour.review_count || 0})</span>
                 </div>
               </div>
               <h1 className="text-4xl md:text-6xl font-black text-white tracking-tighter mb-4 leading-tight drop-shadow-2xl">{tour.title}</h1>
@@ -281,7 +287,7 @@ export function TourDetail() {
               <p className="text-sm font-black uppercase tracking-widest text-primary mb-1">Your Host & Guide</p>
               <h3 className="text-3xl font-black mb-3">{tour.created_by_name || `Guide #${String(tour.created_by).slice(0, 6)}`}</h3>
               <div className="flex flex-wrap justify-center md:justify-start gap-4 text-sm font-bold text-muted-foreground mb-6">
-                <span className="flex items-center gap-1.5"><Star className="w-4 h-4 fill-accent text-accent" /> 4.8 Rating</span>
+                <span className="flex items-center gap-1.5"><Star className="w-4 h-4 fill-accent text-accent" /> {tour.average_rating || "0.0"} Rating</span>
                 <span className="flex items-center gap-1.5"><MapPin className="w-4 h-4" /> Local Expert</span>
               </div>
               <p className="text-lg text-foreground font-medium leading-relaxed max-w-2xl">
@@ -289,6 +295,13 @@ export function TourDetail() {
               </p>
             </div>
           </section>
+
+          {/* Reviews Section */}
+          <ReviewSection 
+            tourId={tour.id} 
+            currentUserId={currentUserId}
+            isStaff={isStaff}
+          />
         </div>
 
         {/* Right Side: Sticky Checkout / Pricing (4 cols) */}
