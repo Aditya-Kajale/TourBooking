@@ -23,6 +23,7 @@ export const router = createBrowserRouter([
       { path: 'signup', Component: Signup },
       { path: 'calendar', Component: CalendarView },
       { path: 'add-tour', Component: AddTour },
+      { path: 'edit-tour/:id', Component: AddTour },
       { path: 'tour/:id', Component: TourDetail },
       { path: 'dashboard', Component: Dashboard },
       { path: 'booking/:id', Component: Booking },

@@ -47,6 +47,19 @@ class TourSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Tour date cannot be in the past.")
         return value
 
+    def validate_image(self, value):
+        if value:
+            # Check size (5MB limit)
+            if value.size > 5 * 1024 * 1024:
+                raise serializers.ValidationError("Image size cannot exceed 5MB.")
+            
+            # Check file extension
+            import os
+            ext = os.path.splitext(value.name)[1].lower()
+            if ext not in ['.jpg', '.jpeg', '.png', '.webp']:
+                raise serializers.ValidationError("Unsupported image format. Use JPEG, PNG, or WEBP.")
+        return value
+
     class Meta:
         model = Tour
         fields = [

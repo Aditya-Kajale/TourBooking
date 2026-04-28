@@ -215,13 +215,25 @@ export function Dashboard() {
                             </div>
 
                             {isCreated && (
-                              <button
-                                onClick={(e) => handleDelete(e, tour.id)}
-                                className="opacity-0 group-hover:opacity-100 p-2 text-destructive hover:bg-destructive/10 rounded-lg transition-all"
-                                title="Delete Tour"
-                              >
-                                <Trash2 size={18} />
-                              </button>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigate(`/edit-tour/${tour.id}`);
+                                  }}
+                                  className="opacity-0 group-hover:opacity-100 p-2 text-primary hover:bg-primary/10 rounded-lg transition-all"
+                                  title="Edit Tour"
+                                >
+                                  <FileText size={18} />
+                                </button>
+                                <button
+                                  onClick={(e) => handleDelete(e, tour.id)}
+                                  className="opacity-0 group-hover:opacity-100 p-2 text-destructive hover:bg-destructive/10 rounded-lg transition-all"
+                                  title="Delete Tour"
+                                >
+                                  <Trash2 size={18} />
+                                </button>
+                              </div>
                             )}
                           </div>
                         </div>

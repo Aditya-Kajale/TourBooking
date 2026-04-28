@@ -53,6 +53,12 @@ export const createTour = (data: FormData): Promise<Tour> =>
         body: data,
     });
 
+export const updateTour = (id: string, data: FormData): Promise<Tour> =>
+    apiFetch<Tour>(`/api/tours/${id}/`, {
+        method: "PATCH",
+        body: data,
+    });
+
 export const getToursByDate = (date: string): Promise<Tour[]> =>
     getTours().then(tours => tours.filter(t => t.date === date));
 

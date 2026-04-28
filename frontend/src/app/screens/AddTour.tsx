@@ -3,14 +3,17 @@ import {
   MapPin, Calendar, DollarSign, Users, Clock,
   FileText, Image as ImageIcon, Check
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { createTour } from "../../api/tours";
+import { createTour, getTour, updateTour } from "../../api/tours";
 
 export function AddTour() {
+  const { id } = useParams();
   const navigate = useNavigate();
+  const isEditMode = !!id;
 
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(isEditMode);
   const [submitted, setSubmitted] = useState(false);
 
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -28,6 +31,33 @@ export function AddTour() {
   });
 
   const categories = ['Adventure', 'Culture', 'Food', 'Relaxation'];
+
+  // ✅ Fetch data if in edit mode
+  useEffect(() => {
+    if (isEditMode && id) {
+      getTour(id)
+        .then((tour) => {
+          setFormData({
+            title: tour.title || '',
+            location: tour.location || '',
+            date: tour.date || '',
+            price: String(tour.price) || '',
+            max_people: String(tour.max_people) || '',
+            duration: tour.duration || '',
+            category: tour.category || 'Adventure',
+            description: tour.description || '',
+          });
+          if (tour.image) {
+            setImagePreview(tour.image.startsWith('http') ? tour.image : `http://127.0.0.1:8000${tour.image}`);
+          }
+          setFetching(false);
+        })
+        .catch(() => {
+          toast.error("Failed to load tour details");
+          navigate('/dashboard');
+        });
+    }
+  }, [id, isEditMode, navigate]);
 
   // ✅ Image handler (Converts to JPEG automatically)
   const handleImageChange = (e: any) => {
@@ -57,7 +87,7 @@ export function AddTour() {
   };
 
   const handleRemoveImage = () => {
-    if (imagePreview) URL.revokeObjectURL(imagePreview);
+    if (imagePreview && !imagePreview.startsWith('http')) URL.revokeObjectURL(imagePreview);
     setImageFile(null);
     setImagePreview(null);
   };
@@ -68,13 +98,7 @@ export function AddTour() {
     setLoading(true);
 
     try {
-      // diagnostic info
-      try {
-        // eslint-disable-next-line no-console
-        console.debug('AddTour submit', { user: localStorage.getItem('user'), csrfToken: localStorage.getItem('csrfToken'), hasImage: !!imageFile });
-      } catch (e) {}
       const data = new FormData();
-
       data.append("title", formData.title);
       data.append("location", formData.location);
       data.append("description", formData.description);
@@ -88,15 +112,20 @@ export function AddTour() {
         data.append("image", imageFile);
       }
 
-      await createTour(data);
+      if (isEditMode && id) {
+        await updateTour(id, data);
+        toast.success("Tour updated successfully!");
+      } else {
+        await createTour(data);
+        toast.success("Tour created successfully!");
+      }
 
-      toast.success("Tour created successfully!");
       setSubmitted(true);
       navigate('/dashboard');
 
     } catch (err) {
       console.error(err);
-      toast.error("Failed to create tour");
+      toast.error(isEditMode ? "Failed to update tour" : "Failed to create tour");
     } finally {
       setLoading(false);
     }
@@ -108,7 +137,15 @@ export function AddTour() {
       toast.error("Only guides allowed");
       navigate('/');
     }
-  }, []);
+  }, [navigate]);
+
+  if (fetching) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   if (submitted) {
     return (
@@ -124,8 +161,12 @@ export function AddTour() {
       <div className="bg-primary px-4 md:px-8 pt-16 pb-28 shadow-sm relative overflow-hidden">
         <div className="absolute top-0 right-0 w-full h-full opacity-[0.03] bg-[radial-gradient(ellipse_at_bottom_right,_var(--tw-gradient-stops))] from-white via-transparent to-transparent pointer-events-none" />
         <div className="max-w-4xl mx-auto relative z-10">
-          <h1 className="text-4xl font-extrabold text-primary-foreground tracking-tight mb-2">Host an Experience</h1>
-          <p className="text-lg text-primary-foreground/80 font-medium max-w-xl">Share your expertise and passion with adventurers from around the world. Fill out the details below to publish your tour.</p>
+          <h1 className="text-4xl font-extrabold text-primary-foreground tracking-tight mb-2">
+            {isEditMode ? "Edit Your Experience" : "Host an Experience"}
+          </h1>
+          <p className="text-lg text-primary-foreground/80 font-medium max-w-xl">
+            {isEditMode ? "Update the details of your tour to keep your guests informed." : "Share your expertise and passion with adventurers from around the world. Fill out the details below to publish your tour."}
+          </p>
         </div>
       </div>
 
@@ -135,8 +176,12 @@ export function AddTour() {
             
             {/* Form Section Headers */}
             <div className="border-b border-border/50 pb-4 mb-4">
-              <h3 className="text-2xl font-bold text-foreground">Basic Details</h3>
-              <p className="text-sm text-muted-foreground mt-1">Start with the essential information.</p>
+              <h3 className="text-2xl font-bold text-foreground">
+                {isEditMode ? "Update Details" : "Basic Details"}
+              </h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                {isEditMode ? "Modify the essential information below." : "Start with the essential information."}
+              </p>
             </div>
 
             {/* TITLE */}
@@ -280,7 +325,7 @@ export function AddTour() {
                 disabled={loading}
                 className="w-full bg-accent text-accent-foreground p-6 rounded-full font-bold text-2xl shadow-xl hover:shadow-accent/40 hover:-translate-y-1 active:translate-y-0 transition-all disabled:opacity-70 disabled:cursor-not-allowed"
               >
-                {loading ? "Publishing Tour..." : "Publish Experience"}
+                {loading ? (isEditMode ? "Updating..." : "Publishing...") : (isEditMode ? "Update Experience" : "Publish Experience")}
               </button>
             </div>
 
