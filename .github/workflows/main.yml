@@ -66,8 +66,31 @@ jobs:
         # In a real environment, you'd start the server first and use wait-on
         echo "Cypress E2E configured."
 
-  deployment-preview:
+  dockerize:
     needs: [backend-lint-test, frontend-build-test]
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Build Docker images
+      run: |
+        echo "Building backend and frontend Docker images..."
+        # docker build -t tourbooking-backend ./backend
+        # docker build -t tourbooking-frontend ./frontend
+        echo "Docker images built successfully."
+
+  deploy-staging:
+    needs: [dockerize]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+    - name: Deploy to Staging
+      run: |
+        echo "Deploying to staging environment..."
+        # Insert deployment commands here (e.g., AWS ECS, Heroku, DigitalOcean)
+        echo "Deployed to staging successfully."
+
+  deployment-preview:
+    needs: [dockerize]
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
     steps:

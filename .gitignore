@@ -4,6 +4,8 @@ Thumbs.db
 *.swp
 tour_booking_workflow.txt
 stability_guidelines.md
+issues.md
+
 # Python global ignores
 __pycache__/
 *.py[cod]

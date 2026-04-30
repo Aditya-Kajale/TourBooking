@@ -20,7 +20,8 @@ class BookingViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticatedOrReadOnly]
     authentication_classes = [TokenAuthentication, SessionAuthentication]
 
-    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
+    @action(detail=False, methods=['get'],
+            permission_classes=[IsAuthenticated])
     def me(self, request):
         """Return bookings belonging to the authenticated user."""
         qs = self.get_queryset().filter(user=request.user)

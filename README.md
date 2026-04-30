@@ -86,5 +86,41 @@ TourBooking/
 └── media/              # Uploaded tour images
 ```
 
+## 🧪 Testing
+
+We use automated tests to ensure application stability.
+
+### Backend Tests
+```bash
+cd backend
+source .env/bin/activate
+pytest
+```
+
+### Frontend Component Tests
+```bash
+cd frontend
+npm run test  # Or npx vitest run
+```
+
+### End-to-End Tests
+```bash
+cd frontend
+npx cypress open  # Or npx cypress run for headless
+```
+
+## 🚀 Deployment Steps
+
+1. **Database & Environment**: Configure your production database (e.g., PostgreSQL) and environment variables (`SECRET_KEY`, `DEBUG=False`, `ALLOWED_HOSTS`).
+2. **Media Storage**: Ensure AWS S3 variables (`AWS_ACCESS_KEY_ID`, `AWS_STORAGE_BUCKET_NAME`) are set for scalable media handling.
+3. **Backend Deployment**: Push your backend code to a provider like Render or Heroku. Run `python manage.py collectstatic` and `python manage.py migrate`.
+4. **Frontend Deployment**: Build the React application `npm run build` and deploy the output to Vercel, Netlify, or an S3 bucket.
+5. **API Docs**: Access `/api/docs/` on your production backend to view the Swagger UI.
+
+## ⚠️ Known Limitations
+- Real-time seat updates are currently handled via Server-Sent Events (SSE). While effective, extremely high-concurrency environments may benefit from an upgrade to WebSockets (Django Channels).
+- SQLite is used for local development but must be migrated to a production-ready database (PostgreSQL/MySQL) before deployment.
+- Payment processing is currently mocked. A real gateway (like Stripe) needs to be integrated before taking real bookings.
+
 ## 📄 License
 MIT

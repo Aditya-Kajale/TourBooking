@@ -5,11 +5,13 @@ from datetime import date, timedelta
 from django.core.files.uploadedfile import SimpleUploadedFile
 from tours.serializers import TourSerializer
 
+
 def generate_image(size=(10, 10), format='JPEG'):
     buf = io.BytesIO()
     img = Image.new('RGB', size)
     img.save(buf, format=format)
     return buf.getvalue()
+
 
 @pytest.mark.django_db
 class TestTourSerializer:
@@ -31,8 +33,9 @@ class TestTourSerializer:
         # Create a valid image but pad it to be over 5MB
         valid_img = generate_image()
         large_content = valid_img + b"0" * (6 * 1024 * 1024)
-        large_file = SimpleUploadedFile("large.jpg", large_content, content_type="image/jpeg")
-        
+        large_file = SimpleUploadedFile(
+            "large.jpg", large_content, content_type="image/jpeg")
+
         data = {
             'title': 'Test Tour',
             'location': 'Test Location',
@@ -53,8 +56,9 @@ class TestTourSerializer:
         # Actually, my serializer checks the extension too.
         # Let's create a valid image but with a blocked extension.
         valid_img = generate_image()
-        invalid_file = SimpleUploadedFile("test.gif", valid_img, content_type="image/gif")
-        
+        invalid_file = SimpleUploadedFile(
+            "test.gif", valid_img, content_type="image/gif")
+
         data = {
             'title': 'Test Tour',
             'location': 'Test Location',

@@ -2,11 +2,13 @@ import re
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext as _
 
+
 class ComplexPasswordValidator:
     """
-    Validate whether the password contains at least one uppercase letter, 
+    Validate whether the password contains at least one uppercase letter,
     one lowercase letter, and one number.
     """
+
     def validate(self, password, user=None):
         if not re.search(r'[A-Z]', password):
             raise ValidationError(

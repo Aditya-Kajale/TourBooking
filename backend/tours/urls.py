@@ -6,5 +6,8 @@ router = DefaultRouter()
 router.register(r'', TourViewSet, basename='tours')
 
 urlpatterns = [
-    path('<uuid:pk>/stream_seats/', tour_seats_stream, name='tour_seats_stream'),
+    path(
+        '<uuid:pk>/stream_seats/',
+        tour_seats_stream,
+        name='tour_seats_stream'),
 ] + router.urls

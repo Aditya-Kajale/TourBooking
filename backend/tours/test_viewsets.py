@@ -8,17 +8,27 @@ from datetime import date, timedelta
 
 User = get_user_model()
 
+
 @pytest.fixture
 def api_client():
     return APIClient()
 
+
 @pytest.fixture
 def guide_user(db):
-    return User.objects.create_user(username='guide', password='password', is_guide=True)
+    return User.objects.create_user(
+        username='guide',
+        password='password',
+        is_guide=True)
+
 
 @pytest.fixture
 def regular_user(db):
-    return User.objects.create_user(username='traveler', password='password', is_guide=False)
+    return User.objects.create_user(
+        username='traveler',
+        password='password',
+        is_guide=False)
+
 
 @pytest.fixture
 def tour(db, guide_user):
@@ -33,13 +43,15 @@ def tour(db, guide_user):
         created_by=guide_user
     )
 
+
 @pytest.mark.django_db
 class TestTourViewSet:
     def test_list_tours_unauthenticated(self, api_client, tour):
         url = reverse('tours-list')
         response = api_client.get(url)
         assert response.status_code == status.HTTP_200_OK
-        # Check if tour is in response (DRF might return results key if paginated)
+        # Check if tour is in response (DRF might return results key if
+        # paginated)
         data = response.data
         tours_list = data['results'] if 'results' in data else data
         assert len(tours_list) >= 1
@@ -62,14 +74,15 @@ class TestTourViewSet:
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
     def test_update_tour_only_by_author(self, api_client, guide_user, tour):
-        another_guide = User.objects.create_user(username='another', password='password', is_guide=True)
+        another_guide = User.objects.create_user(
+            username='another', password='password', is_guide=True)
         api_client.force_authenticate(user=another_guide)
-        
+
         url = reverse('tours-detail', args=[tour.id])
         data = {'title': 'Updated Title'}
         response = api_client.patch(url, data)
         assert response.status_code == status.HTTP_403_FORBIDDEN
-        
+
         api_client.force_authenticate(user=guide_user)
         response = api_client.patch(url, data)
         assert response.status_code == status.HTTP_200_OK

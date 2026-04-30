@@ -26,6 +26,7 @@ class TourPagination(PageNumberPagination):
 
 class IsOwnerOrReadOnly(BasePermission):
     """Object-level permission: only owners may edit/delete."""
+
     def has_object_permission(self, request, view, obj):
         if request.method in ('GET', 'HEAD', 'OPTIONS'):
             return True
@@ -35,8 +36,10 @@ class IsOwnerOrReadOnly(BasePermission):
             and str(obj.created_by_id) == str(request.user.id)
         )
 
+
 class IsGuide(BasePermission):
     """Permission: only users with is_guide=True can create tours."""
+
     def has_permission(self, request, view):
         if request.method in ('GET', 'HEAD', 'OPTIONS'):
             return True
@@ -45,7 +48,10 @@ class IsGuide(BasePermission):
 
 class TourViewSet(viewsets.ModelViewSet):
     serializer_class = TourSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly, IsGuide]
+    permission_classes = [
+        IsAuthenticatedOrReadOnly,
+        IsOwnerOrReadOnly,
+        IsGuide]
     authentication_classes = [TokenAuthentication, SessionAuthentication]
     pagination_class = TourPagination
     filter_backends = [SearchFilter, OrderingFilter]
@@ -90,11 +96,14 @@ class TourViewSet(viewsets.ModelViewSet):
         self.perform_destroy(instance)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+
 @sync_to_async
 def get_tour_seat_info(tour_id):
     try:
         tour = Tour.objects.get(pk=tour_id)
-        booked_agg = tour.booking_set.exclude(status='cancelled').aggregate(total=Sum('participants'))
+        booked_agg = tour.booking_set.exclude(
+            status='cancelled').aggregate(
+            total=Sum('participants'))
         booked_count = booked_agg['total'] or 0
         return {
             'max_people': tour.max_people,
@@ -104,6 +113,7 @@ def get_tour_seat_info(tour_id):
         }
     except Tour.DoesNotExist:
         return None
+
 
 async def tour_seats_stream(request, pk):
     """
@@ -116,14 +126,15 @@ async def tour_seats_stream(request, pk):
             if current_state is None:
                 yield "event: error\ndata: Tour not found\n\n"
                 break
-            
+
             if current_state != last_state:
                 yield f"data: {json.dumps(current_state)}\n\n"
                 last_state = current_state
-            
+
             await asyncio.sleep(2)
 
-    response = StreamingHttpResponse(event_stream(), content_type='text/event-stream')
+    response = StreamingHttpResponse(
+        event_stream(), content_type='text/event-stream')
     response['Cache-Control'] = 'no-cache'
     response['X-Accel-Buffering'] = 'no'
     return response

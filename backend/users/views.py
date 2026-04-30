@@ -15,7 +15,7 @@ from rest_framework.authtoken.models import Token
 
 logger = logging.getLogger(__name__)
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
+# ── Helpers ─────────────────────────────────────────────────────────────
 
 TOKEN_EXPIRY_HOURS = getattr(settings, 'AUTH_TOKEN_EXPIRY_HOURS', 72)
 
@@ -63,7 +63,7 @@ def _parse_json_body(request) -> dict:
     return data
 
 
-# ── Endpoints ─────────────────────────────────────────────────────────────────
+# ── Endpoints ───────────────────────────────────────────────────────────
 
 def me(request):
     """Return current authenticated user info, or 401."""
@@ -89,16 +89,22 @@ def login_view(request):
     password = data.get('password')
 
     if not username or not password:
-        return JsonResponse({'detail': 'Username and password are required.'}, status=400)
+        return JsonResponse(
+            {'detail': 'Username and password are required.'}, status=400)
 
     user = authenticate(request, username=username, password=password)
     if user is None:
         # Intentionally vague to prevent user-enumeration attacks
-        logger.warning('Failed login attempt for username=%s ip=%s', username, request.META.get('REMOTE_ADDR'))
-        return JsonResponse({'detail': 'Invalid username or password.'}, status=401)
+        logger.warning(
+            'Failed login attempt for username=%s ip=%s',
+            username,
+            request.META.get('REMOTE_ADDR'))
+        return JsonResponse(
+            {'detail': 'Invalid username or password.'}, status=401)
 
     if not user.is_active:
-        return JsonResponse({'detail': 'This account has been deactivated.'}, status=403)
+        return JsonResponse(
+            {'detail': 'This account has been deactivated.'}, status=403)
 
     django_login(request, user)
 
@@ -148,14 +154,20 @@ def register_view(request):
     if User.objects.filter(username=username).exists():
         return JsonResponse({'detail': 'Username already exists.'}, status=409)
 
-    user = User.objects.create_user(username=username, email=email, password=password)
+    user = User.objects.create_user(
+        username=username,
+        email=email,
+        password=password)
     user.is_guide = is_guide
     user.save()
 
     token = Token.objects.create(user=user)
     csrf_token = get_token(request)
 
-    logger.info('New user registered username=%s is_guide=%s', username, is_guide)
+    logger.info(
+        'New user registered username=%s is_guide=%s',
+        username,
+        is_guide)
 
     resp = JsonResponse(_user_payload(user, token.key, csrf_token), status=201)
     resp.set_cookie(
@@ -177,7 +189,8 @@ def token_refresh_view(request):
     """
     auth_header = request.META.get('HTTP_AUTHORIZATION', '')
     if not auth_header.startswith('Token '):
-        return JsonResponse({'detail': 'Authorization token required.'}, status=401)
+        return JsonResponse(
+            {'detail': 'Authorization token required.'}, status=401)
 
     old_key = auth_header.split(' ', 1)[1].strip()
     try:

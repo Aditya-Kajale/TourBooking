@@ -10,6 +10,8 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+from corsheaders.defaults import default_headers
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -47,6 +49,7 @@ INSTALLED_APPS = [
     'bookings',
     'reviews',
     'guides',
+    'drf_spectacular',
 ]
 
 MIDDLEWARE = [
@@ -147,6 +150,7 @@ REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 12,
     'EXCEPTION_HANDLER': 'tour_backend.exceptions.custom_exception_handler',
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'DEFAULT_THROTTLE_CLASSES': [
         'rest_framework.throttling.AnonRateThrottle',
         'rest_framework.throttling.UserRateThrottle'
@@ -174,8 +178,8 @@ CSRF_TRUSTED_ORIGINS = [
     'http://localhost:3000',
 ]
 
-# Allow our custom dev header for local development (so preflight accepts X-DEV-USER)
-from corsheaders.defaults import default_headers
+# Allow our custom dev header for local development (so preflight accepts
+# X-DEV-USER)
 CORS_ALLOW_HEADERS = list(default_headers) + [
     'x-dev-user',
 ]
@@ -183,6 +187,23 @@ CORS_ALLOW_HEADERS = list(default_headers) + [
 # Media files
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+# AWS S3 Configuration for Secure Media Uploads
+AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
+AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
+AWS_STORAGE_BUCKET_NAME = os.getenv('AWS_STORAGE_BUCKET_NAME')
+AWS_S3_REGION_NAME = os.getenv('AWS_S3_REGION_NAME', 'us-east-1')
+
+if AWS_ACCESS_KEY_ID and AWS_STORAGE_BUCKET_NAME:
+    # Use S3 for media storage
+    DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+    AWS_S3_FILE_OVERWRITE = False
+    AWS_DEFAULT_ACL = None
+    # Generate signed URLs that expire after 1 hour (3600 seconds)
+    AWS_QUERYSTRING_AUTH = True
+    AWS_QUERYSTRING_EXPIRE = 3600
+    # Media URL is handled dynamically by django-storages with signed params
+    MEDIA_URL = f'https://{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/'
 
 # Security & Auth Settings
 AUTH_TOKEN_EXPIRY_HOURS = 72
