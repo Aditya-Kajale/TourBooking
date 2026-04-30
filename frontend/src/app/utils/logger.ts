@@ -51,3 +51,10 @@ export const logger = {
     }
   },
 };
+
+/**
+ * Specifically exported to match the stability guidelines requirement.
+ * Alias for logger.error.
+ */
+export const logError = logger.error;
+

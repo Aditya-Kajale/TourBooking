@@ -35,10 +35,17 @@ class IsOwnerOrReadOnly(BasePermission):
             and str(obj.created_by_id) == str(request.user.id)
         )
 
+class IsGuide(BasePermission):
+    """Permission: only users with is_guide=True can create tours."""
+    def has_permission(self, request, view):
+        if request.method in ('GET', 'HEAD', 'OPTIONS'):
+            return True
+        return request.user and request.user.is_authenticated and request.user.is_guide
+
 
 class TourViewSet(viewsets.ModelViewSet):
     serializer_class = TourSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly]
+    permission_classes = [IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly, IsGuide]
     authentication_classes = [TokenAuthentication, SessionAuthentication]
     pagination_class = TourPagination
     filter_backends = [SearchFilter, OrderingFilter]
