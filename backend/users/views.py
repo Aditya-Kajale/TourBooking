@@ -12,6 +12,8 @@ from django.views.decorators.http import require_POST
 from django.utils import timezone
 from django.conf import settings
 from rest_framework.authtoken.models import Token
+from .email_service import EmailService
+from .models import EmailVerificationToken
 
 logger = logging.getLogger(__name__)
 
@@ -35,11 +37,20 @@ def _rotate_token(user) -> Token:
 
 def _user_payload(user, token_key: str, csrf_token: str) -> dict:
     """Standard JSON payload returned after successful auth."""
+    profile_pic_url = None
+    if user.profile_pic:
+        profile_pic_url = user.profile_pic.url
     return {
         'id': str(user.id),
         'username': user.username,
         'email': user.email,
+        'first_name': user.first_name,
+        'last_name': user.last_name,
+        'phone': user.phone,
+        'profile_pic': profile_pic_url,
+        'email_verified': user.email_verified,
         'is_guide': getattr(user, 'is_guide', False),
+        'guide_verification_status': getattr(user, 'guide_verification_status', 'not_requested'),
         'csrfToken': csrf_token,
         'token': token_key,
         'token_expiry_hours': TOKEN_EXPIRY_HOURS,
@@ -69,11 +80,20 @@ def me(request):
     """Return current authenticated user info, or 401."""
     user = request.user
     if user and user.is_authenticated:
+        profile_pic_url = None
+        if user.profile_pic:
+            profile_pic_url = user.profile_pic.url
         return JsonResponse({
             'id': str(user.id),
             'username': user.username,
             'email': user.email,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'phone': user.phone,
+            'profile_pic': profile_pic_url,
+            'email_verified': user.email_verified,
             'is_guide': getattr(user, 'is_guide', False),
+            'guide_verification_status': getattr(user, 'guide_verification_status', 'not_requested'),
         })
     return JsonResponse({'detail': 'Not authenticated'}, status=401)
 
@@ -128,12 +148,16 @@ def login_view(request):
 @require_POST
 def register_view(request):
     """Create a new user account and return an auth token."""
-    data = _parse_json_body(request)
+    data = request.POST.dict()  # Use POST data for form fields
+    files = request.FILES
 
     username = (data.get('username') or '').strip()
     password = data.get('password') or ''
     email = (data.get('email') or '').strip()
-    is_guide = bool(data.get('is_guide', False))
+    first_name = (data.get('first_name') or '').strip()
+    last_name = (data.get('last_name') or '').strip()
+    phone = (data.get('phone') or '').strip()
+    profile_pic = files.get('profile_pic')
 
     # ── Validation ─────────────────────────────────────────────────
     errors = {}
@@ -147,6 +171,15 @@ def register_view(request):
     elif len(password) < 8:
         errors['password'] = 'Password must be at least 8 characters.'
 
+    if not first_name:
+        errors['first_name'] = 'First name is required.'
+
+    if not last_name:
+        errors['last_name'] = 'Last name is required.'
+
+    if not phone:
+        errors['phone'] = 'Phone number is required.'
+
     if errors:
         return JsonResponse({'detail': errors}, status=400)
 
@@ -157,17 +190,38 @@ def register_view(request):
     user = User.objects.create_user(
         username=username,
         email=email,
-        password=password)
-    user.is_guide = is_guide
+        password=password,
+        first_name=first_name,
+        last_name=last_name)
+    user.phone = phone
+    # is_guide remains False by default; guides are verified separately
+    if profile_pic:
+        user.profile_pic = profile_pic
     user.save()
+
+    # Create and send email verification token
+    token_string = EmailVerificationToken.generate_token()
+    EmailVerificationToken.objects.create(
+        user=user,
+        token=token_string,
+        expires_at=timezone.now() + timedelta(hours=24)
+    )
+
+    # Send verification email asynchronously in production (use Celery)
+    # For now, send synchronously
+    email_sent = EmailService.send_verification_email(
+        user_email=user.email,
+        token=token_string,
+        user_name=user.first_name
+    )
 
     token = Token.objects.create(user=user)
     csrf_token = get_token(request)
 
     logger.info(
-        'New user registered username=%s is_guide=%s',
+        'New user registered username=%s email_sent=%s',
         username,
-        is_guide)
+        email_sent)
 
     resp = JsonResponse(_user_payload(user, token.key, csrf_token), status=201)
     resp.set_cookie(
@@ -237,3 +291,93 @@ def logout_view(request):
 
     logger.info('User logged out')
     return JsonResponse({'detail': 'Logged out successfully.'})
+
+
+@csrf_exempt
+@require_POST
+def verify_email_view(request):
+    """Verify email using token sent via email link."""
+    data = _parse_json_body(request)
+    token = (data.get('token') or '').strip()
+
+    if not token:
+        return JsonResponse({'detail': 'Verification token is required.'}, status=400)
+
+    try:
+        email_token = EmailVerificationToken.objects.select_related('user').get(token=token)
+    except EmailVerificationToken.DoesNotExist:
+        return JsonResponse({'detail': 'Invalid or expired verification token.'}, status=400)
+
+    # Check if token is still valid
+    if not email_token.is_valid():
+        return JsonResponse({'detail': 'Verification token has expired. Please request a new one.'}, status=400)
+
+    # Mark email as verified
+    user = email_token.user
+    user.email_verified = True
+    user.email_verified_at = timezone.now()
+    user.save()
+
+    # Mark token as used
+    email_token.mark_used()
+
+    logger.info('Email verified for user=%s', user.username)
+    return JsonResponse({
+        'detail': 'Email verified successfully!',
+        'email_verified': True,
+    })
+
+
+@csrf_exempt
+@require_POST
+def resend_verification_email_view(request):
+    """Resend email verification link to user."""
+    data = _parse_json_body(request)
+    email = (data.get('email') or '').strip()
+
+    if not email:
+        return JsonResponse({'detail': 'Email address is required.'}, status=400)
+
+    User = get_user_model()
+    try:
+        user = User.objects.get(email=email)
+    except User.DoesNotExist:
+        # Don't reveal if email exists (security best practice)
+        return JsonResponse({
+            'detail': 'If an account exists with this email, a verification link has been sent.'
+        })
+
+    # Check if already verified
+    if user.email_verified:
+        return JsonResponse({
+            'detail': 'This email is already verified.',
+            'email_verified': True,
+        })
+
+    # Delete old token if exists
+    EmailVerificationToken.objects.filter(user=user, is_used=False).delete()
+
+    # Create new verification token
+    token_string = EmailVerificationToken.generate_token()
+    email_token = EmailVerificationToken.objects.create(
+        user=user,
+        token=token_string,
+        expires_at=timezone.now() + timedelta(hours=24)
+    )
+
+    # Send verification email
+    success = EmailService.send_verification_email(
+        user_email=user.email,
+        token=token_string,
+        user_name=user.first_name
+    )
+
+    if success:
+        logger.info('Verification email resent to user=%s', user.username)
+        return JsonResponse({
+            'detail': 'Verification email has been sent. Please check your inbox.',
+        })
+    else:
+        return JsonResponse({
+            'detail': 'Failed to send verification email. Please try again later.',
+        }, status=500)

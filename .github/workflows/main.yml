@@ -10,9 +10,9 @@ jobs:
   backend-lint-test:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Set up Python 3.14
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '3.14'
     - name: Install dependencies
@@ -40,11 +40,11 @@ jobs:
   frontend-build-test:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Set up Node.js
-      uses: actions/setup-node@v3
+      uses: actions/setup-node@v4
       with:
-        node-version: '20'
+        node-version: '22'
     - name: Install dependencies
       run: |
         cd frontend
@@ -70,7 +70,7 @@ jobs:
     needs: [backend-lint-test, frontend-build-test]
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Build Docker images
       run: |
         echo "Building backend and frontend Docker images..."

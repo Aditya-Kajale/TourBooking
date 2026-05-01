@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, Mail, MapPin, Calendar, Shield, LogOut, CircleUserRound } from 'lucide-react';
+import { User, Mail, MapPin, Calendar, Shield, LogOut, CircleUserRound, Smartphone } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { apiFetch } from '../../api/client';
 import { Booking } from '../../api/types';
@@ -32,6 +32,10 @@ export function Profile() {
     await logout();
     navigate('/login');
   };
+
+  const fullName = [user?.first_name, user?.last_name].filter(Boolean).join(' ');
+  const displayName = fullName || user?.username || 'Adventurer';
+  const profilePicUrl = user?.profile_pic || '';
 
   if (!user) {
     return (
@@ -65,10 +69,20 @@ export function Profile() {
         </div>
 
         <div className="max-w-4xl mx-auto relative z-10 flex flex-col items-center text-center mt-4">
-          <div className="w-32 h-32 bg-white/10 backdrop-blur-xl border border-white/20 rounded-full flex items-center justify-center mb-6 text-white shadow-2xl ring-4 ring-white/5">
-            <CircleUserRound className="w-16 h-16" />
+          <div className="w-32 h-32 bg-white/10 backdrop-blur-xl border border-white/20 rounded-full overflow-hidden mb-6 text-white shadow-2xl ring-4 ring-white/5">
+            {profilePicUrl ? (
+              <img
+                src={profilePicUrl}
+                alt={`${displayName} profile picture`}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center bg-primary/10 text-white">
+                <CircleUserRound className="w-16 h-16" />
+              </div>
+            )}
           </div>
-          <h1 className="text-4xl md:text-5xl font-bold text-white tracking-tight mb-3 drop-shadow-md">{user.username}</h1>
+          <h1 className="text-4xl md:text-5xl font-bold text-white tracking-tight mb-3 drop-shadow-md">{displayName}</h1>
           <div className="flex items-center gap-3">
             <span className="bg-accent text-accent-foreground px-4 py-1.5 rounded-full text-xs font-extrabold uppercase tracking-widest shadow-lg">Adventurer</span>
             <span className="text-white/60 font-bold">•</span>
@@ -91,6 +105,18 @@ export function Profile() {
             </div>
           </div>
 
+          {fullName && (
+            <div className="bg-card p-8 rounded-[2rem] border border-border/50 shadow-sm flex items-center gap-6 group hover:border-primary/30 transition-all">
+              <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                <User className="h-8 w-8 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground font-bold uppercase tracking-widest mb-1">Full Name</p>
+                <p className="text-2xl font-bold text-foreground">{fullName}</p>
+              </div>
+            </div>
+          )}
+
           {user.email && (
             <div className="bg-card p-8 rounded-[2rem] border border-border/50 shadow-sm flex items-center gap-6 group hover:border-primary/30 transition-all">
               <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
@@ -99,6 +125,18 @@ export function Profile() {
               <div className="min-w-0">
                 <p className="text-sm text-muted-foreground font-bold uppercase tracking-widest mb-1">Email Address</p>
                 <p className="text-2xl font-bold text-foreground truncate">{user.email}</p>
+              </div>
+            </div>
+          )}
+
+          {user.phone && (
+            <div className="bg-card p-8 rounded-[2rem] border border-border/50 shadow-sm flex items-center gap-6 group hover:border-primary/30 transition-all">
+              <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                <Smartphone className="h-8 w-8 text-primary" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm text-muted-foreground font-bold uppercase tracking-widest mb-1">Phone Number</p>
+                <p className="text-2xl font-bold text-foreground">{user.phone}</p>
               </div>
             </div>
           )}

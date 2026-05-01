@@ -76,7 +76,13 @@ export type User = {
   id: string;
   username: string;
   email?: string;
+  first_name?: string;
+  last_name?: string;
+  phone?: string;
+  profile_pic?: string | null;
+  email_verified?: boolean;
   is_guide?: boolean;
+  guide_verification_status?: 'not_requested' | 'pending' | 'approved' | 'rejected';
   csrfToken?: string;
   token?: string;
 };

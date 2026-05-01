@@ -205,6 +205,34 @@ if AWS_ACCESS_KEY_ID and AWS_STORAGE_BUCKET_NAME:
     # Media URL is handled dynamically by django-storages with signed params
     MEDIA_URL = f'https://{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/'
 
+# Email Configuration
+# ──────────────────────────────────────────────────────────────────────────────
+# For local development, uses Django's default console email backend
+# For production, set EMAIL_BACKEND to SendGrid or AWS SES
+EMAIL_BACKEND = os.getenv(
+    'EMAIL_BACKEND',
+    'django.core.mail.backends.console.EmailBackend'  # Print to console for local dev
+)
+
+# If using SMTP backend (production):
+# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
+EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True') == 'True'
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
+
+# Default from email
+DEFAULT_FROM_EMAIL = os.getenv('EMAIL_FROM', 'noreply@tourbooking.com')
+
+# SendGrid Configuration (alternative to SMTP)
+# Set EMAIL_BACKEND to 'sendgrid_backend.SendgridBackend' and set SENDGRID_API_KEY
+SENDGRID_API_KEY = os.getenv('SENDGRID_API_KEY')
+SENDGRID_SANDBOX_MODE_IN_DEBUG = False  # Don't sandbox emails in debug mode
+
+# Frontend URL for email links
+FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:5173')
+
 # Security & Auth Settings
 AUTH_TOKEN_EXPIRY_HOURS = 72
 

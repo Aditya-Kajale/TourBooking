@@ -21,7 +21,7 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-screen flex bg-background">
+    <div className="min-h-screen h-screen overflow-hidden flex bg-background">
       {/* Left Promotional Side */}
       <div className="hidden lg:flex w-1/2 bg-primary relative items-center justify-center overflow-hidden">
         <img 
@@ -36,14 +36,14 @@ export function Login() {
       </div>
 
       {/* Right Login Form Side */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8">
-        <div className="w-full max-w-md">
-          <div className="text-center lg:text-left mb-10">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 overflow-hidden">
+        <div className="w-full max-w-lg overflow-hidden rounded-[2rem] border border-border/50 bg-card shadow-xl p-6 max-h-[calc(100vh-3rem)] lg:max-h-none">
+          <div className="text-center lg:text-left mb-6">
             <h2 className="text-3xl font-extrabold tracking-tight text-foreground mb-2">Welcome back</h2>
             <p className="text-muted-foreground">Please enter your details to sign in.</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6 overflow-y-auto pr-1 pb-4 max-h-[calc(100vh-4rem)] lg:max-h-none">
             {error && (
               <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-2xl text-destructive font-medium text-sm">
                 {error}

@@ -3,6 +3,7 @@ import { Layout } from './components/Layout';
 import { Home } from './screens/Home';
 import { Login } from './screens/Login';
 import { Signup } from './screens/Signup';
+import { VerifyEmail } from './screens/VerifyEmail';
 import { Index } from './screens/Index';
 import { CalendarView } from './screens/CalendarView';
 import { AddTour } from './screens/AddTour';
@@ -19,8 +20,6 @@ export const router = createBrowserRouter([
     children: [
       { index: true, Component: Index },
       { path: 'home', Component: Home },
-      { path: 'login', Component: Login },
-      { path: 'signup', Component: Signup },
       { path: 'calendar', Component: CalendarView },
       { path: 'add-tour', Component: AddTour },
       { path: 'edit-tour/:id', Component: AddTour },
@@ -31,4 +30,7 @@ export const router = createBrowserRouter([
       { path: 'profile', Component: Profile },
     ],
   },
+  { path: 'login', Component: Login },
+  { path: 'signup', Component: Signup },
+  { path: 'verify-email', Component: VerifyEmail },
 ]);

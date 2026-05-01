@@ -21,6 +21,8 @@ urlpatterns = [
     path('api/register/', users_views.register_view),
     path('api/refresh-token/', users_views.token_refresh_view),
     path('api/logout/', users_views.logout_view),
+    path('api/verify-email/', users_views.verify_email_view),
+    path('api/resend-verification-email/', users_views.resend_verification_email_view),
 
     # OpenAPI Docs
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),

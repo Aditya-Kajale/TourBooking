@@ -25,11 +25,17 @@ export const login = async (username: string, password: string) => {
 
 export const register = async (data: any) => {
   try {
+    const formData = new FormData();
+    for (const key in data) {
+      if (data[key] !== null && data[key] !== undefined) {
+        formData.append(key, data[key]);
+      }
+    }
+
     const res = await fetch(`${API_BASE}/api/register/`, {
       method: 'POST',
       credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
+      body: formData,
     });
 
     if (res.ok) {
@@ -70,6 +76,53 @@ export const refreshToken = async () => {
     return false;
   } catch (err) {
     return false;
+  }
+};
+
+export const verifyEmail = async (token: string) => {
+  try {
+    const res = await fetch(`${API_BASE}/api/verify-email/`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token }),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      // Update user in localStorage to reflect email_verified status
+      const user = localStorage.getItem('user');
+      if (user) {
+        const userData = JSON.parse(user);
+        userData.email_verified = true;
+        localStorage.setItem('user', JSON.stringify(userData));
+      }
+      return { ok: true, message: data.detail };
+    }
+    const err = await res.json();
+    return { ok: false, error: err.detail || 'Verification failed' };
+  } catch (err) {
+    return { ok: false, error: 'Network error' };
+  }
+};
+
+export const resendVerificationEmail = async (email: string) => {
+  try {
+    const res = await fetch(`${API_BASE}/api/resend-verification-email/`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      return { ok: true, message: data.detail };
+    }
+    const err = await res.json();
+    return { ok: false, error: err.detail || 'Failed to resend email' };
+  } catch (err) {
+    return { ok: false, error: 'Network error' };
   }
 };
 
