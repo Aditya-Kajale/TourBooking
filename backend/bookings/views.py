@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 from django.db.models import Sum
+from django.utils import timezone
 from .models import Booking
 from .serializers import BookingSerializer
 from tours.models import Tour
@@ -46,6 +47,11 @@ class BookingViewSet(viewsets.ModelViewSet):
         # Prevent guide from booking their own tour
         if tour_instance.created_by_id == self.request.user.id:
             raise PermissionDenied('Guides cannot book their own tours.')
+
+        # Prevent booking tours whose date has already passed
+        tour_date = tour_instance.date
+        if tour_date < timezone.localdate():
+            raise ValidationError({'tour': 'This tour has already taken place and cannot be booked.'})
 
         # ── Atomic overbooking prevention ────────────────────────
         with transaction.atomic():

@@ -23,6 +23,20 @@ export function TourDetail() {
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [participants, setParticipants] = useState(1);
 
+  // Disable booking for past tours
+  const isPastTour = tour ? (() => {
+    try {
+      const tourDate = new Date(tour.date + 'T00:00:00');
+      const now = new Date();
+      // compare only the date portion
+      tourDate.setHours(0,0,0,0);
+      now.setHours(0,0,0,0);
+      return tourDate < now;
+    } catch (e) {
+      return false;
+    }
+  })() : false;
+
   // ✅ Real-time Seat Info
   const { seatInfo } = useTourSeats(tour?.id);
   const currentMaxPeople = seatInfo?.max_people ?? tour?.max_people ?? 10;
@@ -354,20 +368,24 @@ export function TourDetail() {
                 <>
                   <button
                     onClick={() => {
+                      if (isPastTour) {
+                        alert('This tour has already taken place and cannot be booked.');
+                        return;
+                      }
                       if (currentIsHousefull) {
-                        alert("Sorry, this tour is fully booked.");
+                        alert('Sorry, this tour is fully booked.');
                         return;
                       }
                       setShowBookingModal(true);
                     }}
-                    disabled={currentIsHousefull}
+                    disabled={currentIsHousefull || isPastTour}
                     className={`w-full py-6 rounded-full font-black text-2xl shadow-xl transition-all ${
-                      currentIsHousefull 
-                        ? 'bg-muted text-muted-foreground cursor-not-allowed' 
+                      (currentIsHousefull || isPastTour)
+                        ? 'bg-muted text-muted-foreground cursor-not-allowed'
                         : 'bg-primary hover:bg-primary/90 text-primary-foreground shadow-primary/30 hover:-translate-y-1 active:scale-[0.98]'
                     }`}
                   >
-                    {currentIsHousefull ? 'Housefull' : 'Check Availability'}
+                    {isPastTour ? 'Event Passed' : currentIsHousefull ? 'Housefull' : 'Check Availability'}
                   </button>
                   <button
                     onClick={handleWhatsAppClick}
