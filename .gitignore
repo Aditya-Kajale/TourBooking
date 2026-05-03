@@ -5,6 +5,7 @@ Thumbs.db
 tour_booking_workflow.txt
 stability_guidelines.md
 issues.md
+EMAIL_SETUP.md
 
 # Python global ignores
 __pycache__/
