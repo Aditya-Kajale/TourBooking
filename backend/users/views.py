@@ -215,22 +215,18 @@ def register_view(request):
         user_name=user.first_name
     )
 
-    token = Token.objects.create(user=user)
-    csrf_token = get_token(request)
-
     logger.info(
         'New user registered username=%s email_sent=%s',
         username,
         email_sent)
 
-    resp = JsonResponse(_user_payload(user, token.key, csrf_token), status=201)
-    resp.set_cookie(
-        'csrftoken', csrf_token,
-        httponly=False,
-        samesite='Lax',
-        secure=request.is_secure(),
-    )
-    return resp
+    # ⚠️ DO NOT create auth token yet - user must verify email first
+    # After email verification, user will login with their credentials
+    return JsonResponse({
+        'detail': 'Account created! Please verify your email to complete registration.',
+        'email': user.email,
+        'username': user.username,
+    }, status=201)
 
 
 @csrf_exempt
@@ -381,3 +377,54 @@ def resend_verification_email_view(request):
         return JsonResponse({
             'detail': 'Failed to send verification email. Please try again later.',
         }, status=500)
+
+
+@csrf_exempt
+def check_username_availability_view(request):
+    """Check if username is available (not already taken)."""
+    if request.method != 'POST':
+        return JsonResponse({'detail': 'Method not allowed'}, status=405)
+
+    data = _parse_json_body(request)
+    username = (data.get('username') or '').strip()
+
+    if not username:
+        return JsonResponse({'available': False, 'message': 'Username is required.'}, status=400)
+
+    if len(username) < 3:
+        return JsonResponse({'available': False, 'message': 'Username must be at least 3 characters.'})
+
+    User = get_user_model()
+    exists = User.objects.filter(username__iexact=username).exists()
+
+    return JsonResponse({
+        'available': not exists,
+        'username': username,
+        'message': 'Username is already taken.' if exists else 'Username is available.',
+    })
+
+
+@csrf_exempt
+def check_email_availability_view(request):
+    """Check if email is available (not already used by another user)."""
+    if request.method != 'POST':
+        return JsonResponse({'detail': 'Method not allowed'}, status=405)
+
+    data = _parse_json_body(request)
+    email = (data.get('email') or '').strip()
+
+    if not email:
+        return JsonResponse({'available': False, 'message': 'Email is required.'}, status=400)
+
+    # Basic email format validation
+    if not email or '@' not in email or '.' not in email.split('@')[1]:
+        return JsonResponse({'available': False, 'message': 'Invalid email format.'})
+
+    User = get_user_model()
+    exists = User.objects.filter(email__iexact=email).exists()
+
+    return JsonResponse({
+        'available': not exists,
+        'email': email,
+        'message': 'Email is already in use.' if exists else 'Email is available.',
+    })

@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { checkUsernameAvailability, checkEmailAvailability } from '../../api/auth';
 
 export function Signup() {
   const [username, setUsername] = useState('');
@@ -11,11 +12,19 @@ export function Signup() {
   const [lastName, setLastName] = useState('');
   const [phone, setPhone] = useState('');
   const [profilePic, setProfilePic] = useState<File | null>(null);
+  const [profilePicPreview, setProfilePicPreview] = useState<string | null>(null);
   const [agreeToTerms, setAgreeToTerms] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const navigate = useNavigate();
   const { register } = useAuth();
+
+  // Real-time validation states
+  const [usernameStatus, setUsernameStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle');
+  const [emailStatus, setEmailStatus] = useState<'idle' | 'checking' | 'valid' | 'invalid'>('idle');
+  const [phoneStatus, setPhoneStatus] = useState<'idle' | 'valid' | 'invalid'>('idle');
+  const usernameCheckTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const emailCheckTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Password strength calculation
   const getPasswordStrength = (pwd: string) => {
@@ -36,6 +45,107 @@ export function Signup() {
     return 'bg-green-500';
   };
 
+  // Phone validation - Indian format (10 digits starting with 6-9)
+  const isValidPhoneFormat = (phoneNumber: string): boolean => {
+    // Indian phone format: 10 digits starting with 6, 7, 8, or 9
+    // Allows: 9876543210, +91 98765 43210, +91-98765-43210, (98765) 43210, etc.
+    const phoneRegex = /^(\+91[-.\s]?)?[6-9]\d{9}$/;
+    // Remove all non-digit characters except the leading +
+    const cleaned = phoneNumber.replace(/^(\+91)/, '').replace(/[-.\s()]/g, '');
+    return phoneRegex.test('+91' + cleaned);
+  };
+
+  // Email validation
+  const isValidEmailFormat = (emailAddr: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(emailAddr);
+  };
+
+  // Handle phone change with real-time validation
+  const handlePhoneChange = (value: string) => {
+    setPhone(value);
+    if (value.trim()) {
+      setPhoneStatus(isValidPhoneFormat(value) ? 'valid' : 'invalid');
+    } else {
+      setPhoneStatus('idle');
+    }
+  };
+
+  // Handle email change with real-time validation
+  const handleEmailChange = (value: string) => {
+    setEmail(value);
+    if (!value.trim()) {
+      setEmailStatus('idle');
+      return;
+    }
+
+    if (!isValidEmailFormat(value)) {
+      setEmailStatus('invalid');
+      return;
+    }
+
+    // Debounce email availability check
+    if (emailCheckTimeoutRef.current) {
+      clearTimeout(emailCheckTimeoutRef.current);
+    }
+    setEmailStatus('checking');
+
+    emailCheckTimeoutRef.current = setTimeout(async () => {
+      const result = await checkEmailAvailability(value);
+      if (result.available) {
+        setEmailStatus('valid');
+      } else {
+        setEmailStatus('invalid');
+      }
+    }, 800);
+  };
+
+  // Handle username change with real-time validation
+  const handleUsernameChange = (value: string) => {
+    setUsername(value);
+    if (!value.trim()) {
+      setUsernameStatus('idle');
+      return;
+    }
+
+    if (value.trim().length < 3) {
+      setUsernameStatus('idle');
+      return;
+    }
+
+    // Debounce username availability check
+    if (usernameCheckTimeoutRef.current) {
+      clearTimeout(usernameCheckTimeoutRef.current);
+    }
+    setUsernameStatus('checking');
+
+    usernameCheckTimeoutRef.current = setTimeout(async () => {
+      const result = await checkUsernameAvailability(value);
+      if (result.available) {
+        setUsernameStatus('available');
+      } else {
+        setUsernameStatus('taken');
+      }
+    }, 800);
+  };
+
+  // Handle profile picture upload with preview
+  const handleProfilePicChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files ? e.target.files[0] : null;
+    if (file) {
+      setProfilePic(file);
+      // Create preview URL
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProfilePicPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setProfilePic(null);
+      setProfilePicPreview(null);
+    }
+  };
+
   const validateForm = () => {
     const errors: Record<string, string> = {};
 
@@ -43,9 +153,15 @@ export function Signup() {
     if (!lastName.trim()) errors.lastName = 'Last name is required';
     if (!username.trim()) errors.username = 'Username is required';
     if (username.trim().length < 3) errors.username = 'Username must be at least 3 characters';
+    if (usernameStatus === 'taken') errors.username = 'Username is already taken';
+    
     if (!email.trim()) errors.email = 'Email is required';
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.email = 'Invalid email format';
+    if (!isValidEmailFormat(email)) errors.email = 'Invalid email format';
+    if (emailStatus === 'invalid' || emailStatus === 'checking') errors.email = 'Email is invalid or already in use';
+    
     if (!phone.trim()) errors.phone = 'Phone number is required';
+    if (!isValidPhoneFormat(phone)) errors.phone = 'Invalid phone number format';
+    
     if (!password) errors.password = 'Password is required';
     if (password.length < 8) errors.password = 'Password must be at least 8 characters';
     if (!/[a-z]/.test(password) || !/[A-Z]/.test(password)) errors.password = 'Password must contain uppercase and lowercase letters';
@@ -137,24 +253,41 @@ export function Signup() {
             <div className="grid gap-4 md:grid-cols-2">
               <div>
                 <label className="block text-sm font-bold text-foreground uppercase tracking-wider mb-2">Username *</label>
-                <input 
-                  value={username} 
-                  onChange={(e) => setUsername(e.target.value)} 
-                  className={`w-full px-5 py-4 bg-card border rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none font-medium ${validationErrors.username ? 'border-destructive' : 'border-border/50'}`} 
-                  placeholder="Choose a username"
-                />
+                <div className="relative">
+                  <input 
+                    value={username} 
+                    onChange={(e) => handleUsernameChange(e.target.value)} 
+                    className={`w-full px-5 py-4 bg-card border rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none font-medium ${validationErrors.username ? 'border-destructive' : usernameStatus === 'taken' ? 'border-destructive' : usernameStatus === 'available' ? 'border-green-500' : 'border-border/50'}`} 
+                    placeholder="Choose a username"
+                  />
+                  {usernameStatus === 'checking' && <span className="absolute right-4 top-4 text-sm">⏳</span>}
+                  {usernameStatus === 'available' && <span className="absolute right-4 top-4 text-green-500 font-bold">✓</span>}
+                  {usernameStatus === 'taken' && <span className="absolute right-4 top-4 text-destructive font-bold">✕</span>}
+                </div>
+                {usernameStatus === 'checking' && <p className="text-xs text-muted-foreground mt-1">Checking availability...</p>}
+                {usernameStatus === 'available' && <p className="text-xs text-green-600 mt-1">Username is available</p>}
+                {usernameStatus === 'taken' && <p className="text-xs text-destructive mt-1">Username is already taken</p>}
                 {validationErrors.username && <p className="text-xs text-destructive mt-1">{validationErrors.username}</p>}
               </div>
 
               <div>
                 <label className="block text-sm font-bold text-foreground uppercase tracking-wider mb-2">Email Address *</label>
-                <input 
-                  type="email"
-                  value={email} 
-                  onChange={(e) => setEmail(e.target.value)} 
-                  className={`w-full px-5 py-4 bg-card border rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none font-medium ${validationErrors.email ? 'border-destructive' : 'border-border/50'}`} 
-                  placeholder="you@example.com"
-                />
+                <div className="relative">
+                  <input 
+                    type="email"
+                    value={email} 
+                    onChange={(e) => handleEmailChange(e.target.value)} 
+                    className={`w-full px-5 py-4 bg-card border rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none font-medium ${validationErrors.email ? 'border-destructive' : emailStatus === 'invalid' ? 'border-destructive' : emailStatus === 'valid' ? 'border-green-500' : 'border-border/50'}`} 
+                    placeholder="you@example.com"
+                  />
+                  {emailStatus === 'checking' && <span className="absolute right-4 top-4 text-sm">⏳</span>}
+                  {emailStatus === 'valid' && <span className="absolute right-4 top-4 text-green-500 font-bold">✓</span>}
+                  {emailStatus === 'invalid' && email && <span className="absolute right-4 top-4 text-destructive font-bold">✕</span>}
+                </div>
+                {emailStatus === 'checking' && <p className="text-xs text-muted-foreground mt-1">Checking availability...</p>}
+                {emailStatus === 'valid' && <p className="text-xs text-green-600 mt-1">Email is available</p>}
+                {emailStatus === 'invalid' && email && !isValidEmailFormat(email) && <p className="text-xs text-destructive mt-1">Invalid email format</p>}
+                {emailStatus === 'invalid' && email && isValidEmailFormat(email) && <p className="text-xs text-destructive mt-1">Email is already in use</p>}
                 {validationErrors.email && <p className="text-xs text-destructive mt-1">{validationErrors.email}</p>}
                 <p className="text-xs text-muted-foreground mt-1">We'll send a verification link to this email</p>
               </div>
@@ -163,13 +296,19 @@ export function Signup() {
             <div className="grid gap-4 md:grid-cols-2">
               <div>
                 <label className="block text-sm font-bold text-foreground uppercase tracking-wider mb-2">Phone Number *</label>
-                <input 
-                  type="tel"
-                  value={phone} 
-                  onChange={(e) => setPhone(e.target.value)} 
-                  className={`w-full px-5 py-4 bg-card border rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none font-medium ${validationErrors.phone ? 'border-destructive' : 'border-border/50'}`} 
-                  placeholder="Enter your phone number"
-                />
+                <div className="relative">
+                  <input 
+                    type="tel"
+                    value={phone} 
+                    onChange={(e) => handlePhoneChange(e.target.value)} 
+                    className={`w-full px-5 py-4 bg-card border rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none font-medium ${validationErrors.phone ? 'border-destructive' : phoneStatus === 'invalid' ? 'border-destructive' : phoneStatus === 'valid' ? 'border-green-500' : 'border-border/50'}`} 
+                    placeholder="+1 (123) 456-7890"
+                  />
+                  {phoneStatus === 'valid' && <span className="absolute right-4 top-4 text-green-500 font-bold">✓</span>}
+                  {phoneStatus === 'invalid' && <span className="absolute right-4 top-4 text-destructive font-bold">✕</span>}
+                </div>
+                {phoneStatus === 'valid' && <p className="text-xs text-green-600 mt-1">Valid phone number</p>}
+                {phoneStatus === 'invalid' && <p className="text-xs text-destructive mt-1">Invalid phone format (e.g., +1 (123) 456-7890)</p>}
                 {validationErrors.phone && <p className="text-xs text-destructive mt-1">{validationErrors.phone}</p>}
               </div>
               <div className="flex flex-col justify-end">
@@ -177,10 +316,14 @@ export function Signup() {
                 <input 
                   type="file"
                   accept="image/*"
-                  onChange={(e) => setProfilePic(e.target.files ? e.target.files[0] : null)} 
+                  onChange={handleProfilePicChange}
                   className="w-full px-5 py-4 bg-card border border-border/50 rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none font-medium" 
                 />
-                {profilePic && <p className="text-xs text-muted-foreground mt-1">Selected: {profilePic.name}</p>}
+                {profilePicPreview ? (
+                  <img src={profilePicPreview} alt="Preview" className="mt-3 w-24 h-24 object-cover rounded-full border border-border/30" />
+                ) : profilePic ? (
+                  <p className="text-xs text-muted-foreground mt-1">Selected: {profilePic.name}</p>
+                ) : null}
               </div>
             </div>
 

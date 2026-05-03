@@ -141,3 +141,41 @@ export const logout = async () => {
   localStorage.removeItem('csrfToken');
   localStorage.removeItem('token');
 };
+
+export const checkUsernameAvailability = async (username: string) => {
+  try {
+    const res = await fetch(`${API_BASE}/api/check-username/`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username }),
+    });
+
+    const data = await res.json();
+    return {
+      available: data.available,
+      message: data.message,
+    };
+  } catch (err) {
+    return { available: false, message: 'Network error' };
+  }
+};
+
+export const checkEmailAvailability = async (email: string) => {
+  try {
+    const res = await fetch(`${API_BASE}/api/check-email/`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+
+    const data = await res.json();
+    return {
+      available: data.available,
+      message: data.message,
+    };
+  } catch (err) {
+    return { available: false, message: 'Network error' };
+  }
+};

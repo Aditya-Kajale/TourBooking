@@ -44,8 +44,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const register = async (data: any) => {
     const res = await apiRegister(data);
-    if (res.ok && res.user) {
-      setUser(res.user);
+    if (res.ok) {
+      // Don't login user yet - they must verify email first
+      // Just show success message and redirect to email verification
       return { ok: true };
     }
     return { ok: false, error: res.error };
