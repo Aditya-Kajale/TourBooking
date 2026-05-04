@@ -73,6 +73,12 @@ export function Login() {
               </div>
             </div>
 
+            <div className="text-right">
+              <button type="button" onClick={() => navigate('/forgot-password')} className="text-sm text-primary font-semibold hover:underline">
+                Forgot password?
+              </button>
+            </div>
+
             <button className="w-full py-4 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full font-bold text-lg shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all mt-4">
               Sign In
             </button>

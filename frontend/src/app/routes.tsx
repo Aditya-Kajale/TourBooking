@@ -12,6 +12,8 @@ import { Dashboard } from './screens/Dashboard';
 import { Booking } from './screens/Booking';
 import { Profile } from './screens/Profile';
 import { MyBookings } from './screens/MyBookings';
+import { ForgotPassword } from './screens/ForgotPassword';
+import { ResetPassword } from './screens/ResetPassword';
 
 export const router = createBrowserRouter([
   {
@@ -33,4 +35,6 @@ export const router = createBrowserRouter([
   { path: 'login', Component: Login },
   { path: 'signup', Component: Signup },
   { path: 'verify-email', Component: VerifyEmail },
+  { path: 'forgot-password', Component: ForgotPassword },
+  { path: 'reset-password', Component: ResetPassword },
 ]);
