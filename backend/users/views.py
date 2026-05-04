@@ -13,7 +13,7 @@ from django.utils import timezone
 from django.conf import settings
 from rest_framework.authtoken.models import Token
 from .email_service import EmailService
-from .models import EmailVerificationToken
+from .models import EmailVerificationToken, PasswordResetToken
 
 logger = logging.getLogger(__name__)
 
@@ -428,3 +428,80 @@ def check_email_availability_view(request):
         'email': email,
         'message': 'Email is already in use.' if exists else 'Email is available.',
     })
+
+
+@csrf_exempt
+@require_POST
+def request_password_reset_view(request):
+    """Send a password reset link to the user's email."""
+    data = _parse_json_body(request)
+    email = (data.get('email') or '').strip()
+
+    if not email:
+        return JsonResponse({'detail': 'Email address is required.'}, status=400)
+
+    # Always return success to prevent email enumeration
+    success_msg = 'If an account exists with this email, a password reset link has been sent.'
+
+    User = get_user_model()
+    try:
+        user = User.objects.get(email=email)
+    except User.DoesNotExist:
+        return JsonResponse({'detail': success_msg})
+
+    # Invalidate any existing unused reset tokens
+    PasswordResetToken.objects.filter(user=user, is_used=False).delete()
+
+    # Create new token (expires in 1 hour)
+    token_string = PasswordResetToken.generate_token()
+    PasswordResetToken.objects.create(
+        user=user,
+        token=token_string,
+        expires_at=timezone.now() + timedelta(hours=1)
+    )
+
+    # Send the reset email
+    EmailService.send_password_reset_email(
+        user_email=user.email,
+        token=token_string,
+        user_name=user.first_name
+    )
+
+    logger.info('Password reset requested for user=%s', user.username)
+    return JsonResponse({'detail': success_msg})
+
+
+@csrf_exempt
+@require_POST
+def confirm_password_reset_view(request):
+    """Reset the user's password using a valid token."""
+    data = _parse_json_body(request)
+    token = (data.get('token') or '').strip()
+    new_password = data.get('new_password') or ''
+
+    if not token:
+        return JsonResponse({'detail': 'Reset token is required.'}, status=400)
+    if not new_password or len(new_password) < 8:
+        return JsonResponse({'detail': 'Password must be at least 8 characters.'}, status=400)
+
+    try:
+        reset_token = PasswordResetToken.objects.select_related('user').get(token=token)
+    except PasswordResetToken.DoesNotExist:
+        return JsonResponse({'detail': 'Invalid or expired reset token.'}, status=400)
+
+    if not reset_token.is_valid():
+        return JsonResponse({'detail': 'This reset link has expired. Please request a new one.'}, status=400)
+
+    # Set new password
+    user = reset_token.user
+    user.set_password(new_password)
+    user.save()
+
+    # Mark token as used
+    reset_token.mark_used()
+
+    # Invalidate all existing auth tokens for security
+    Token.objects.filter(user=user).delete()
+
+    logger.info('Password reset completed for user=%s', user.username)
+    return JsonResponse({'detail': 'Password has been reset successfully. Please log in with your new password.'})

@@ -76,3 +76,44 @@ class EmailVerificationToken(models.Model):
         """Generate a cryptographically secure token."""
         chars = string.ascii_letters + string.digits + '-_'
         return ''.join(secrets.choice(chars) for _ in range(length))
+
+
+class PasswordResetToken(models.Model):
+    """Store password reset tokens with 1-hour expiration."""
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='password_reset_tokens')
+    token = models.CharField(max_length=255, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    is_used = models.BooleanField(default=False)
+    used_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Password Reset Token"
+        verbose_name_plural = "Password Reset Tokens"
+        indexes = [
+            models.Index(fields=['token']),
+            models.Index(fields=['user', 'is_used']),
+        ]
+
+    def __str__(self):
+        return f"Password reset for {self.user.email}"
+
+    def is_valid(self) -> bool:
+        """Check if token is valid (not expired, not used)."""
+        return (
+            not self.is_used and
+            timezone.now() < self.expires_at
+        )
+
+    def mark_used(self):
+        """Mark token as used."""
+        self.is_used = True
+        self.used_at = timezone.now()
+        self.save()
+
+    @staticmethod
+    def generate_token(length: int = 64) -> str:
+        """Generate a cryptographically secure token."""
+        chars = string.ascii_letters + string.digits + '-_'
+        return ''.join(secrets.choice(chars) for _ in range(length))

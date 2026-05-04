@@ -10,11 +10,12 @@ A premium, state-of-the-art tour booking platform featuring a **Forest-themed** 
 - **🎟️ Real-time Availability**: Advanced seat-tracking logic ensures that booked seats are accurately reflected across the platform, from detail pages to the home grid.
 - **📊 User Dashboard**: Personalized dashboard for users to track their own created tours and active bookings in one place.
 - **⭐ Reviews & Ratings**: Integrated review system for users to share and view feedback on tours.
+- **📜 API Documentation**: Fully interactive OpenAPI/Swagger documentation at `/api/docs/`.
 
 ## 🛠️ Technology Stack
 
 - **Frontend**: React 18, Vite, Tailwind CSS, Lucide React
-- **Backend**: Django 4.x, Django REST Framework, SQLite (Local Development)
+- **Backend**: Django 6.x, Django REST Framework, SQLite (Local Development)
 - **Authentication**: JWT-based secure authentication
 - **Styling**: Vanilla CSS extensions with Glassmorphism and Custom Theme Tokens
 
@@ -22,7 +23,7 @@ A premium, state-of-the-art tour booking platform featuring a **Forest-themed** 
 
 ### Prerequisites
 - **Python**: 3.10+
-- **Node.js**: 18.x+
+- **Node.js**: 20.x+ (Recommended: 22.x)
 - **npm** or **pnpm**
 
 ### Backend Setup (Django)
