@@ -27,6 +27,13 @@ urlpatterns = [
     path('api/check-email/', users_views.check_email_availability_view),
     path('api/request-password-reset/', users_views.request_password_reset_view),
     path('api/confirm-password-reset/', users_views.confirm_password_reset_view),
+    
+    # 2FA APIs
+    path('api/2fa/setup/', users_views.get_2fa_setup),
+    path('api/2fa/enable/', users_views.enable_2fa),
+    path('api/2fa/disable/', users_views.disable_2fa),
+    path('api/2fa/status/', users_views.get_2fa_status),
+    path('api/2fa/verify/', users_views.verify_2fa_code),
 
     # OpenAPI Docs
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import User, EmailVerificationToken
+from .models import User, EmailVerificationToken, TwoFactorAuth, TwoFactorSession
 
 
 @admin.register(User)
@@ -29,3 +29,30 @@ class EmailVerificationTokenAdmin(admin.ModelAdmin):
     is_valid.boolean = True
     is_valid.short_description = 'Currently Valid'
 
+
+@admin.register(TwoFactorAuth)
+class TwoFactorAuthAdmin(admin.ModelAdmin):
+    list_display = ('user', 'is_enabled', 'method', 'created_at', 'enabled_at', 'last_verified_at')
+    list_filter = ('is_enabled', 'method', 'created_at')
+    search_fields = ('user__username', 'user__email')
+    readonly_fields = ('created_at', 'enabled_at', 'last_verified_at')
+    fieldsets = (
+        ('User & Status', {'fields': ('user', 'is_enabled', 'method')}),
+        ('TOTP Configuration', {'fields': ('totp_secret',)}),
+        ('SMS Configuration', {'fields': ('phone_number',)}),
+        ('Recovery', {'fields': ('backup_codes',)}),
+        ('Timeline', {'fields': ('created_at', 'enabled_at', 'last_verified_at')}),
+    )
+
+
+@admin.register(TwoFactorSession)
+class TwoFactorSessionAdmin(admin.ModelAdmin):
+    list_display = ('user', 'verified', 'created_at', 'expires_at', 'failed_attempts', 'is_valid')
+    list_filter = ('verified', 'created_at', 'expires_at')
+    search_fields = ('user__username', 'user__email', 'session_code')
+    readonly_fields = ('session_code', 'created_at', 'verified_at', 'is_valid')
+    
+    def is_valid(self, obj):
+        return obj.is_valid()
+    is_valid.boolean = True
+    is_valid.short_description = 'Currently Valid'

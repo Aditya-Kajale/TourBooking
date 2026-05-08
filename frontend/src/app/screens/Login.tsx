@@ -1,24 +1,73 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { TwoFactorVerify } from '../components/TwoFactorVerify';
 
 export function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [requires2FA, setRequires2FA] = useState(false);
+  const [sessionCode, setSessionCode] = useState('');
+  const [userEmail, setUserEmail] = useState('');
   const navigate = useNavigate();
   const { login } = useAuth();
 
   const handleSubmit = async (e: any) => {
     e.preventDefault();
     setError(null);
-    const res = await login(username, password);
-    if (res.ok) {
-      navigate('/home');
-    } else {
-      setError(res.error || 'Login failed');
+    
+    try {
+      const res = await fetch('http://127.0.0.1:8000/api/login/', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
+
+      const data = await res.json();
+
+      if (res.status === 202 && data.requires_2fa) {
+        // 2FA required
+        setRequires2FA(true);
+        setSessionCode(data.session_code);
+        setUserEmail(data.user.email);
+      } else if (res.ok) {
+        // Normal login flow
+        localStorage.setItem('user', JSON.stringify(data));
+        if (data.csrfToken) localStorage.setItem('csrfToken', data.csrfToken);
+        if (data.token) localStorage.setItem('token', data.token);
+        navigate('/home');
+      } else {
+        setError(data.detail || 'Login failed');
+      }
+    } catch (err) {
+      setError('Network error. Please try again.');
     }
   };
+
+  const handle2FASuccess = (user: any) => {
+    localStorage.setItem('user', JSON.stringify(user));
+    if (user.csrfToken) localStorage.setItem('csrfToken', user.csrfToken);
+    if (user.token) localStorage.setItem('token', user.token);
+    navigate('/home');
+  };
+
+  if (requires2FA) {
+    return (
+      <TwoFactorVerify
+        sessionCode={sessionCode}
+        userEmail={userEmail}
+        onSuccess={handle2FASuccess}
+        onCancel={() => {
+          setRequires2FA(false);
+          setSessionCode('');
+          setUserEmail('');
+          setPassword('');
+        }}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen h-screen overflow-hidden flex bg-background">

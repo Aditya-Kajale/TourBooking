@@ -8,7 +8,7 @@ from django.contrib.auth import authenticate, login as django_login
 from django.middleware.csrf import get_token
 from django.contrib.auth import logout as django_logout
 from django.contrib.auth import get_user_model
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_http_methods
 from django.utils import timezone
 from django.conf import settings
 from rest_framework.authtoken.models import Token
@@ -40,6 +40,16 @@ def _user_payload(user, token_key: str, csrf_token: str) -> dict:
     profile_pic_url = None
     if user.profile_pic:
         profile_pic_url = user.profile_pic.url
+    
+    # Get 2FA status
+    from .models import TwoFactorAuth
+    two_fa_enabled = False
+    try:
+        two_fa = TwoFactorAuth.objects.get(user=user)
+        two_fa_enabled = two_fa.is_enabled
+    except TwoFactorAuth.DoesNotExist:
+        pass
+    
     return {
         'id': str(user.id),
         'username': user.username,
@@ -51,6 +61,7 @@ def _user_payload(user, token_key: str, csrf_token: str) -> dict:
         'email_verified': user.email_verified,
         'is_guide': getattr(user, 'is_guide', False),
         'guide_verification_status': getattr(user, 'guide_verification_status', 'not_requested'),
+        'two_fa_enabled': two_fa_enabled,
         'csrfToken': csrf_token,
         'token': token_key,
         'token_expiry_hours': TOKEN_EXPIRY_HOURS,
@@ -127,6 +138,28 @@ def login_view(request):
             {'detail': 'This account has been deactivated.'}, status=403)
 
     django_login(request, user)
+
+    # ── Check for 2FA ────────────────────────────────────────────────────
+    from .models import TwoFactorAuth
+    try:
+        two_fa = TwoFactorAuth.objects.get(user=user, is_enabled=True)
+        # 2FA is enabled - create temporary session for 2FA verification
+        from .two_factor_utils import create_2fa_session
+        session = create_2fa_session(user)
+        
+        logger.info('Successful password auth for user=%s, 2FA required', user.username)
+        
+        return JsonResponse({
+            'detail': '2FA verification required.',
+            'requires_2fa': True,
+            'session_code': session.session_code,
+            'user': {
+                'username': user.username,
+                'email': user.email,
+            }
+        }, status=202)
+    except TwoFactorAuth.DoesNotExist:
+        pass  # Continue with normal login
 
     # Rotate token on every login for security
     token = _rotate_token(user)
@@ -505,3 +538,196 @@ def confirm_password_reset_view(request):
 
     logger.info('Password reset completed for user=%s', user.username)
     return JsonResponse({'detail': 'Password has been reset successfully. Please log in with your new password.'})
+
+
+# ── Two-Factor Authentication (2FA) ────────────────────────────────────
+
+@require_http_methods(['GET'])
+def get_2fa_setup(request):
+    """Get QR code and backup codes for 2FA setup."""
+    if not request.user or not request.user.is_authenticated:
+        return JsonResponse({'detail': 'Not authenticated.'}, status=401)
+    
+    from .serializers import TwoFactorSetupSerializer
+    from .two_factor_utils import get_totp_uri, generate_qr_code, generate_backup_codes
+    import pyotp
+    
+    # Generate new TOTP secret
+    secret = pyotp.random_base32()
+    uri = get_totp_uri(request.user, secret)
+    qr_code = generate_qr_code(uri)
+    backup_codes = generate_backup_codes(10)
+    
+    return JsonResponse({
+        'secret': secret,
+        'qr_code': qr_code,
+        'uri': uri,
+        'backup_codes': backup_codes,
+    })
+
+
+@csrf_exempt
+@require_POST
+def enable_2fa(request):
+    """Enable 2FA after verifying the first TOTP code."""
+    if not request.user or not request.user.is_authenticated:
+        return JsonResponse({'detail': 'Not authenticated.'}, status=401)
+    
+    from .models import TwoFactorAuth
+    from .two_factor_utils import verify_totp_code, generate_backup_codes
+    
+    data = _parse_json_body(request)
+    secret = data.get('secret', '').strip()
+    code = data.get('code', '').strip()
+    method = data.get('method', 'totp').strip()
+    
+    if not secret or not code:
+        return JsonResponse(
+            {'detail': 'Secret and code are required.'}, status=400)
+    
+    if not code.isdigit() or len(code) != 6:
+        return JsonResponse(
+            {'detail': '2FA code must be 6 digits.'}, status=400)
+    
+    # Verify the code
+    if not verify_totp_code(secret, code):
+        return JsonResponse(
+            {'detail': 'Invalid 2FA code. Please try again.'}, status=400)
+    
+    # Create or update 2FA record
+    two_fa, created = TwoFactorAuth.objects.get_or_create(
+        user=request.user,
+        defaults={
+            'method': method,
+            'totp_secret': secret,
+            'backup_codes': generate_backup_codes(10),
+        }
+    )
+    
+    if not created:
+        # Update existing record
+        two_fa.method = method
+        two_fa.totp_secret = secret
+        two_fa.backup_codes = generate_backup_codes(10)
+    
+    two_fa.is_enabled = True
+    two_fa.enabled_at = timezone.now()
+    two_fa.save()
+    
+    logger.info('2FA enabled for user=%s method=%s', request.user.username, method)
+    
+    return JsonResponse({
+        'detail': '2FA has been enabled successfully.',
+        'backup_codes': two_fa.backup_codes,
+    })
+
+
+@csrf_exempt
+@require_POST
+def disable_2fa(request):
+    """Disable 2FA for the current user."""
+    if not request.user or not request.user.is_authenticated:
+        return JsonResponse({'detail': 'Not authenticated.'}, status=401)
+    
+    from .models import TwoFactorAuth
+    
+    data = _parse_json_body(request)
+    password = data.get('password', '')
+    
+    if not password:
+        return JsonResponse(
+            {'detail': 'Password is required to disable 2FA.'}, status=400)
+    
+    # Verify password
+    if not request.user.check_password(password):
+        return JsonResponse(
+            {'detail': 'Incorrect password.'}, status=401)
+    
+    try:
+        two_fa = TwoFactorAuth.objects.get(user=request.user)
+        two_fa.is_enabled = False
+        two_fa.totp_secret = ''
+        two_fa.backup_codes = []
+        two_fa.save()
+        
+        logger.info('2FA disabled for user=%s', request.user.username)
+        
+        return JsonResponse({'detail': '2FA has been disabled.'})
+    except TwoFactorAuth.DoesNotExist:
+        return JsonResponse(
+            {'detail': '2FA is not enabled for this account.'}, status=400)
+
+
+@require_http_methods(['GET'])
+def get_2fa_status(request):
+    """Get current 2FA status for the authenticated user."""
+    if not request.user or not request.user.is_authenticated:
+        return JsonResponse({'detail': 'Not authenticated.'}, status=401)
+    
+    from .models import TwoFactorAuth
+    
+    try:
+        two_fa = TwoFactorAuth.objects.get(user=request.user)
+        return JsonResponse({
+            'is_enabled': two_fa.is_enabled,
+            'method': two_fa.method,
+            'created_at': two_fa.created_at.isoformat(),
+            'enabled_at': two_fa.enabled_at.isoformat() if two_fa.enabled_at else None,
+            'last_verified_at': two_fa.last_verified_at.isoformat() if two_fa.last_verified_at else None,
+            'backup_codes_count': len(two_fa.backup_codes) if two_fa.backup_codes else 0,
+        })
+    except TwoFactorAuth.DoesNotExist:
+        return JsonResponse({
+            'is_enabled': False,
+            'method': None,
+            'created_at': None,
+            'enabled_at': None,
+            'last_verified_at': None,
+            'backup_codes_count': 0,
+        })
+
+
+@csrf_exempt
+@require_POST
+def verify_2fa_code(request):
+    """Verify 2FA code after login to get final auth token."""
+    from .models import TwoFactorSession
+    from .two_factor_utils import verify_2fa_session
+    
+    data = _parse_json_body(request)
+    session_code = data.get('session_code', '').strip()
+    totp_code = data.get('code', '').strip()
+    backup_code = data.get('backup_code', '').strip()
+    
+    if not session_code:
+        return JsonResponse(
+            {'detail': 'Session code is required.'}, status=400)
+    
+    if not totp_code and not backup_code:
+        return JsonResponse(
+            {'detail': 'Either TOTP code or backup code must be provided.'}, status=400)
+    
+    # Verify the 2FA session
+    success, user = verify_2fa_session(session_code, totp_code, backup_code)
+    
+    if not success:
+        return JsonResponse(
+            {'detail': 'Invalid 2FA code. Please try again.'}, status=401)
+    
+    # Clean up the session and create auth token
+    TwoFactorSession.objects.filter(session_code=session_code).delete()
+    
+    # Rotate token
+    token = _rotate_token(user)
+    csrf_token = get_token(request)
+    
+    logger.info('Successful 2FA verification for user=%s', user.username)
+    
+    resp = JsonResponse(_user_payload(user, token.key, csrf_token))
+    resp.set_cookie(
+        'csrftoken', csrf_token,
+        httponly=False,
+        samesite='Lax',
+        secure=request.is_secure(),
+    )
+    return resp

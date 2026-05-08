@@ -117,3 +117,76 @@ class PasswordResetToken(models.Model):
         """Generate a cryptographically secure token."""
         chars = string.ascii_letters + string.digits + '-_'
         return ''.join(secrets.choice(chars) for _ in range(length))
+
+
+class TwoFactorAuth(models.Model):
+    """Store TOTP secrets for Two-Factor Authentication (2FA)."""
+    
+    TWO_FA_METHODS = [
+        ('totp', 'Time-based One-Time Password (TOTP)'),
+        ('sms', 'SMS-based OTP'),
+    ]
+    
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='two_factor_auth')
+    is_enabled = models.BooleanField(default=False, help_text="2FA is active for this user")
+    method = models.CharField(max_length=10, choices=TWO_FA_METHODS, default='totp')
+    
+    # TOTP-specific fields
+    totp_secret = models.CharField(max_length=255, blank=True, help_text="Base32-encoded TOTP secret")
+    
+    # SMS-specific fields
+    phone_number = models.CharField(max_length=20, blank=True, help_text="Phone number for SMS OTP")
+    
+    # Backup codes for account recovery
+    backup_codes = models.JSONField(default=list, blank=True, help_text="List of one-time backup codes")
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    enabled_at = models.DateTimeField(null=True, blank=True, help_text="When 2FA was enabled")
+    last_verified_at = models.DateTimeField(null=True, blank=True, help_text="Last successful 2FA verification")
+    
+    class Meta:
+        verbose_name = "Two-Factor Authentication"
+        verbose_name_plural = "Two-Factor Authentications"
+        indexes = [
+            models.Index(fields=['user', 'is_enabled']),
+        ]
+    
+    def __str__(self):
+        return f"2FA ({self.method}) for {self.user.email}"
+
+
+class TwoFactorSession(models.Model):
+    """Track temporary sessions waiting for 2FA verification after login."""
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='two_factor_sessions')
+    session_code = models.CharField(max_length=255, unique=True, help_text="Unique session identifier")
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    verified = models.BooleanField(default=False)
+    verified_at = models.DateTimeField(null=True, blank=True)
+    failed_attempts = models.IntegerField(default=0, help_text="Number of failed 2FA attempts")
+    
+    class Meta:
+        verbose_name = "Two-Factor Session"
+        verbose_name_plural = "Two-Factor Sessions"
+        indexes = [
+            models.Index(fields=['session_code']),
+            models.Index(fields=['user', 'verified', 'expires_at']),
+        ]
+    
+    def __str__(self):
+        return f"2FA Session for {self.user.email}"
+    
+    def is_valid(self) -> bool:
+        """Check if session is valid (not expired, not verified)."""
+        return (
+            not self.verified and
+            timezone.now() < self.expires_at
+        )
+    
+    @staticmethod
+    def generate_session_code(length: int = 48) -> str:
+        """Generate a cryptographically secure session code."""
+        chars = string.ascii_letters + string.digits + '-_'
+        return ''.join(secrets.choice(chars) for _ in range(length))

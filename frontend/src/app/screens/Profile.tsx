@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User, Mail, MapPin, Calendar, Shield, LogOut, CircleUserRound, Smartphone } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { TwoFactorManagement } from '../components/TwoFactorManagement';
 import { apiFetch } from '../../api/client';
 import { Booking } from '../../api/types';
 
@@ -155,6 +156,9 @@ export function Profile() {
               </div>
             </div>
           </div>
+
+          {/* Two-Factor Authentication Management */}
+          <TwoFactorManagement />
           {/* Quick Link to My Bookings */}
           <div className="md:col-span-2 mt-6">
             <button

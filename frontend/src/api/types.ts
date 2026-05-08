@@ -83,6 +83,7 @@ export type User = {
   email_verified?: boolean;
   is_guide?: boolean;
   guide_verification_status?: 'not_requested' | 'pending' | 'approved' | 'rejected';
+  two_fa_enabled?: boolean;
   csrfToken?: string;
   token?: string;
 };

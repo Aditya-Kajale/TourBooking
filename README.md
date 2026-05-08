@@ -7,6 +7,7 @@ A premium, state-of-the-art tour booking platform featuring a **Forest-themed** 
 - **🌲 Forest Theme & UI/UX**: Professional, market-ready design featuring glassmorphism, curated color palettes, and smooth micro-animations.
 - **📱 True Responsive Experience**: Fully optimized for both mobile and high-end desktop views with a dedicated split-screen design for authentication.
 - **🗺️ Tour Management**: Create and manage detailed tours with categories (Adventure, Cultural, etc.), durations, and dynamic image uploading with smart URL handling.
+- **🔐 Two-Factor Authentication**: Added TOTP-based 2FA support for enhanced login security and recovery using backup codes.
 - **🎟️ Real-time Availability**: Advanced seat-tracking logic ensures that booked seats are accurately reflected across the platform, from detail pages to the home grid.
 - **📊 User Dashboard**: Personalized dashboard for users to track their own created tours and active bookings in one place.
 - **⭐ Reviews & Ratings**: Integrated review system for users to share and view feedback on tours.
@@ -16,7 +17,7 @@ A premium, state-of-the-art tour booking platform featuring a **Forest-themed** 
 
 - **Frontend**: React 18, Vite, Tailwind CSS, Lucide React
 - **Backend**: Django 6.x, Django REST Framework, SQLite (Local Development)
-- **Authentication**: JWT-based secure authentication
+- **Authentication**: Token-based secure authentication with Two-Factor Authentication (TOTP + backup codes)
 - **Styling**: Vanilla CSS extensions with Glassmorphism and Custom Theme Tokens
 
 ## 🚀 Getting Started

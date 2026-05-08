@@ -179,3 +179,133 @@ export const checkEmailAvailability = async (email: string) => {
     return { available: false, message: 'Network error' };
   }
 };
+
+// ── 2FA (Two-Factor Authentication) ──────────────────────────────────────
+
+export const get2FASetup = async () => {
+  const token = localStorage.getItem('token');
+  try {
+    const res = await fetch(`${API_BASE}/api/2fa/setup/`, {
+      method: 'GET',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token && { 'Authorization': `Token ${token}` }),
+      },
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      return { ok: true, ...data };
+    }
+    const err = await res.json();
+    return { ok: false, error: err.detail || '2FA setup failed' };
+  } catch (err) {
+    return { ok: false, error: 'Network error' };
+  }
+};
+
+export const enable2FA = async (secret: string, code: string, method: string = 'totp') => {
+  const token = localStorage.getItem('token');
+  try {
+    const res = await fetch(`${API_BASE}/api/2fa/enable/`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token && { 'Authorization': `Token ${token}` }),
+      },
+      body: JSON.stringify({ secret, code, method }),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      return { ok: true, ...data };
+    }
+    const err = await res.json();
+    return { ok: false, error: err.detail || '2FA enable failed' };
+  } catch (err) {
+    return { ok: false, error: 'Network error' };
+  }
+};
+
+export const disable2FA = async (password: string) => {
+  const token = localStorage.getItem('token');
+  try {
+    const res = await fetch(`${API_BASE}/api/2fa/disable/`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token && { 'Authorization': `Token ${token}` }),
+      },
+      body: JSON.stringify({ password }),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      // Update user's 2FA status in localStorage
+      const user = localStorage.getItem('user');
+      if (user) {
+        const userData = JSON.parse(user);
+        userData.two_fa_enabled = false;
+        localStorage.setItem('user', JSON.stringify(userData));
+      }
+      return { ok: true, ...data };
+    }
+    const err = await res.json();
+    return { ok: false, error: err.detail || '2FA disable failed' };
+  } catch (err) {
+    return { ok: false, error: 'Network error' };
+  }
+};
+
+export const get2FAStatus = async () => {
+  const token = localStorage.getItem('token');
+  try {
+    const res = await fetch(`${API_BASE}/api/2fa/status/`, {
+      method: 'GET',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token && { 'Authorization': `Token ${token}` }),
+      },
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      return { ok: true, ...data };
+    }
+    const err = await res.json();
+    return { ok: false, error: err.detail || '2FA status fetch failed' };
+  } catch (err) {
+    return { ok: false, error: 'Network error' };
+  }
+};
+
+export const verify2FACode = async (sessionCode: string, code?: string, backupCode?: string) => {
+  try {
+    const res = await fetch(`${API_BASE}/api/2fa/verify/`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        session_code: sessionCode,
+        code,
+        backup_code: backupCode,
+      }),
+    });
+
+    if (res.ok) {
+      const me = await res.json();
+      localStorage.setItem('user', JSON.stringify(me));
+      if (me.csrfToken) localStorage.setItem('csrfToken', me.csrfToken);
+      if (me.token) localStorage.setItem('token', me.token);
+      return { ok: true, user: me };
+    }
+    const err = await res.json();
+    return { ok: false, error: err.detail || '2FA verification failed' };
+  } catch (err) {
+    return { ok: false, error: 'Network error' };
+  }
+};

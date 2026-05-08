@@ -2,7 +2,7 @@
 .DS_Store
 Thumbs.db
 *.swp
-tour_booking_workflow.txt
+tour_booking_workflow.md
 stability_guidelines.md
 issues.md
 EMAIL_SETUP.md
