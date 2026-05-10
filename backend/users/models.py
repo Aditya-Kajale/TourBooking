@@ -190,3 +190,27 @@ class TwoFactorSession(models.Model):
         """Generate a cryptographically secure session code."""
         chars = string.ascii_letters + string.digits + '-_'
         return ''.join(secrets.choice(chars) for _ in range(length))
+
+
+class GuideDocument(models.Model):
+    """Store uploaded documents for guide verification."""
+    
+    DOCUMENT_TYPES = [
+        ('id_passport', 'ID / Passport'),
+        ('certification', 'Tour Guide Certification'),
+        ('insurance', 'Public Liability Insurance'),
+        ('other', 'Other'),
+    ]
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='guide_documents')
+    document_type = models.CharField(max_length=20, choices=DOCUMENT_TYPES)
+    file = models.FileField(upload_to='guide_documents/')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = "Guide Document"
+        verbose_name_plural = "Guide Documents"
+        
+    def __str__(self):
+        return f"{self.get_document_type_display()} for {self.user.username}"
+

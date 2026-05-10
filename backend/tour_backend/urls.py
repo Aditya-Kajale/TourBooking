@@ -14,6 +14,11 @@ urlpatterns = [
     path('api/reviews/', include('reviews.urls')),
     path('api/guides/', include('guides.urls')),
 
+    # Admin APIs
+    path('api/admin/guide-applications/', users_views.GuideVerificationAdminViewSet.as_view({'get': 'list'})),
+    path('api/admin/guide-applications/<uuid:pk>/', users_views.GuideVerificationAdminViewSet.as_view({'get': 'retrieve'})),
+    path('api/admin/guide-applications/<uuid:pk>/verify/', users_views.GuideVerificationAdminViewSet.as_view({'post': 'verify'})),
+
     # Auth APIs
     path('api-auth/', include('rest_framework.urls')),
     path('api/me/', users_views.me),

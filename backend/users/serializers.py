@@ -92,3 +92,36 @@ class TwoFactorDisableSerializer(serializers.Serializer):
         if user and not user.check_password(value):
             raise serializers.ValidationError("Incorrect password.")
         return value
+
+
+class GuideDocumentSerializer(serializers.ModelSerializer):
+    class Meta:
+        from .models import GuideDocument
+        model = GuideDocument
+        fields = ['id', 'document_type', 'file', 'uploaded_at']
+
+
+class GuideApplicationSerializer(serializers.ModelSerializer):
+    documents = GuideDocumentSerializer(source='guide_documents', many=True, read_only=True)
+    full_name = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = User
+        fields = [
+            'id', 'username', 'email', 'full_name', 'phone', 
+            'guide_verification_status', 'guide_verification_reason', 
+            'guide_requested_at', 'documents'
+        ]
+
+    def get_full_name(self, obj):
+        return f"{obj.first_name} {obj.last_name}".strip() or obj.username
+
+
+class GuideApplicationVerifySerializer(serializers.Serializer):
+    action = serializers.ChoiceField(choices=['approve', 'reject'])
+    reason = serializers.CharField(required=False, allow_blank=True)
+    
+    def validate(self, data):
+        if data['action'] == 'reject' and not data.get('reason'):
+            raise serializers.ValidationError({"reason": "A reason is required when rejecting an application."})
+        return data

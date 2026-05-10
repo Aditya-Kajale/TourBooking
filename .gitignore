@@ -6,6 +6,7 @@ tour_booking_workflow.md
 stability_guidelines.md
 issues.md
 EMAIL_SETUP.md
+REAL_TIME_UPDATES_DOCUMENTATION.md
 
 # Python global ignores
 __pycache__/

@@ -731,3 +731,44 @@ def verify_2fa_code(request):
         secure=request.is_secure(),
     )
     return resp
+
+
+from rest_framework import viewsets, permissions, status
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from .serializers import GuideApplicationSerializer, GuideApplicationVerifySerializer
+
+class GuideVerificationAdminViewSet(viewsets.ReadOnlyModelViewSet):
+    """Admin endpoints to view and approve/reject guide applications."""
+    serializer_class = GuideApplicationSerializer
+    permission_classes = [permissions.IsAdminUser]
+
+    def get_queryset(self):
+        queryset = get_user_model().objects.exclude(guide_verification_status='not_requested')
+        status_param = self.request.query_params.get('status', None)
+        if status_param:
+            queryset = queryset.filter(guide_verification_status=status_param)
+        return queryset.order_by('-guide_requested_at')
+
+    @action(detail=True, methods=['post'], url_path='verify')
+    def verify(self, request, pk=None):
+        user_app = self.get_object()
+        serializer = GuideApplicationVerifySerializer(data=request.data)
+        
+        if serializer.is_valid():
+            action = serializer.validated_data['action']
+            reason = serializer.validated_data.get('reason', '')
+            
+            user_app.guide_verification_status = action + 'ed' # 'approved' or 'rejected'
+            user_app.guide_verification_reason = reason
+            user_app.guide_verified_at = timezone.now()
+            
+            if action == 'approve':
+                user_app.is_guide = True
+            else:
+                user_app.is_guide = False
+                
+            user_app.save()
+            return Response({'status': f'Application {action}ed'})
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
