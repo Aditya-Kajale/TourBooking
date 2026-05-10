@@ -3,10 +3,11 @@
 Thumbs.db
 *.swp
 tour_booking_workflow.md
-stability_guidelines.md
-issues.md
+STABILITY_GUIDELINES.md
+ISSUES.md
 EMAIL_SETUP.md
 REAL_TIME_UPDATES_DOCUMENTATION.md
+TWO_FACTOR_AUTH_DOCUMENTATION.md
 
 # Python global ignores
 __pycache__/
@@ -38,6 +39,10 @@ env/
 venv/
 ENV/
 .venv/
+
+# Logs
+*.log
+django_errors.log
 
 # Workspace
 *.code-workspace

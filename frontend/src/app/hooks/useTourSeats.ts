@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useWebSocket, type SeatData } from '../hooks/useWebSocket';
+import { useWebSocket, type SeatData } from './useWebSocket';
 
 interface SeatInfo {
   max_people: number;
