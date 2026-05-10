@@ -8,15 +8,17 @@ A premium, state-of-the-art tour booking platform featuring a **Forest-themed** 
 - **📱 True Responsive Experience**: Fully optimized for both mobile and high-end desktop views with a dedicated split-screen design for authentication.
 - **🗺️ Tour Management**: Create and manage detailed tours with categories (Adventure, Cultural, etc.), durations, and dynamic image uploading with smart URL handling.
 - **🔐 Two-Factor Authentication**: Added TOTP-based 2FA support for enhanced login security and recovery using backup codes.
-- **🎟️ Real-time Availability**: Advanced seat-tracking logic ensures that booked seats are accurately reflected across the platform, from detail pages to the home grid.
+- **⚡ Real-time Seat Updates**: WebSocket-powered real-time availability tracking using Django Channels - seats update instantly as bookings are made, with automatic reconnection and Redis scaling for high traffic.
+- **🎟️ Accurate Seat Tracking**: Advanced seat-tracking logic ensures that booked seats are accurately reflected across the platform, from detail pages to the home grid.
 - **📊 User Dashboard**: Personalized dashboard for users to track their own created tours and active bookings in one place.
 - **⭐ Reviews & Ratings**: Integrated review system for users to share and view feedback on tours.
 - **📜 API Documentation**: Fully interactive OpenAPI/Swagger documentation at `/api/docs/`.
 
 ## 🛠️ Technology Stack
 
-- **Frontend**: React 18, Vite, Tailwind CSS, Lucide React
-- **Backend**: Django 6.x, Django REST Framework, SQLite (Local Development)
+- **Frontend**: React 18, Vite, Tailwind CSS, Lucide React, WebSocket (native)
+- **Backend**: Django 6.x, Django REST Framework, Django Channels (WebSocket support), Daphne (ASGI), SQLite (Local Development)
+- **Real-Time**: Django Channels 4.x, Redis (Channel Layer), ASGI Protocol
 - **Authentication**: Token-based secure authentication with Two-Factor Authentication (TOTP + backup codes)
 - **Styling**: Vanilla CSS extensions with Glassmorphism and Custom Theme Tokens
 

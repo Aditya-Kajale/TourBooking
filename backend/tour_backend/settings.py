@@ -33,6 +33,7 @@ ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',  # ASGI server for Channels (must be first)
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -50,6 +51,7 @@ INSTALLED_APPS = [
     'reviews',
     'guides',
     'drf_spectacular',
+    'channels',  # Django Channels for WebSocket support
 ]
 
 MIDDLEWARE = [
@@ -289,6 +291,23 @@ LOGGING = {
             'handlers': ['console', 'file'],
             'level': 'DEBUG' if DEBUG else 'INFO',
             'propagate': False,
+        },
+    },
+}
+
+# ── Django Channels Configuration ────────────────────────────────────────
+
+# ASGI application (needed for WebSocket support)
+ASGI_APPLICATION = 'tour_backend.asgi.application'
+
+# Channel Layers Configuration with Redis backend
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            'hosts': [('127.0.0.1', 6379)],  # Redis server address
+            'capacity': 1500,  # Messages queue capacity per channel
+            'expiry': 10,  # Expiry time for messages
         },
     },
 }

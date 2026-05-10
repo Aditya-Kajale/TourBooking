@@ -16,3 +16,8 @@ python-dotenv==1.0.0
 pyotp==2.9.0
 qrcode==8.0
 Pillow==12.2.0
+
+# Real-time WebSocket support for seat updates
+channels==4.0.0
+daphne==4.0.0
+channels-redis==4.1.0

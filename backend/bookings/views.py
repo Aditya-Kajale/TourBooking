@@ -10,6 +10,7 @@ from django.db.models import Sum
 from django.utils import timezone
 from .models import Booking
 from .serializers import BookingSerializer
+from .broadcast_utils import broadcast_seat_update
 from tours.models import Tour
 
 logger = logging.getLogger(__name__)
@@ -86,3 +87,6 @@ class BookingViewSet(viewsets.ModelViewSet):
             'Booking created tour=%s user=%s participants=%d',
             tour.id, self.request.user, participants
         )
+
+        # Broadcast seat update to all connected WebSocket clients
+        broadcast_seat_update(tour.id)

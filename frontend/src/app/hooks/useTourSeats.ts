@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { API_BASE } from '../../api/client';
+import { useWebSocket, type SeatData } from '../hooks/useWebSocket';
 
 interface SeatInfo {
   max_people: number;
@@ -11,45 +11,27 @@ interface SeatInfo {
 export function useTourSeats(tourId?: string | number) {
   const [seatInfo, setSeatInfo] = useState<SeatInfo | null>(null);
   const [error, setError] = useState<Error | null>(null);
+  
+  // Use WebSocket hook for real-time updates
+  const tourIdStr = tourId ? String(tourId) : null;
+  const { seatData, error: wsError } = useWebSocket(tourIdStr, {
+    onError: (errorMsg) => {
+      setError(new Error(errorMsg));
+    }
+  });
 
+  // Convert WebSocket seat data to the format expected by components
   useEffect(() => {
-    if (!tourId) return;
-
-    let eventSource: EventSource | null = null;
-    let reconnectTimeout: NodeJS.Timeout;
-
-    const connect = () => {
-      // Connect to the Server-Sent Events endpoint
-      eventSource = new EventSource(`${API_BASE}/api/tours/${tourId}/stream_seats/`);
-
-      eventSource.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          setSeatInfo(data);
-          setError(null);
-        } catch (e) {
-          console.error("Error parsing SSE data", e);
-        }
-      };
-
-      eventSource.onerror = (err) => {
-        console.error("SSE connection error", err);
-        eventSource?.close();
-        
-        // Attempt to reconnect after 5 seconds if connection drops
-        reconnectTimeout = setTimeout(connect, 5000);
-      };
-    };
-
-    connect();
-
-    return () => {
-      clearTimeout(reconnectTimeout);
-      if (eventSource) {
-        eventSource.close();
-      }
-    };
-  }, [tourId]);
+    if (seatData) {
+      setSeatInfo({
+        max_people: seatData.max_people,
+        bookings_count: seatData.bookings_count,
+        is_housefull: seatData.is_housefull,
+        available_seats: seatData.available_seats,
+      });
+    }
+  }, [seatData]);
 
   return { seatInfo, error };
 }
+
