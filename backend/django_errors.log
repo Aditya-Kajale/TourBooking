@@ -1,0 +1,1 @@
+{"asctime": "2026-05-10 14:43:17,831", "levelname": "CRITICAL", "name": "daphne.server", "message": "Listen failure: Couldn't listen on 127.0.0.1:8000: [Errno 48] Address already in use.", "pathname": "/Users/adityakajale/Developer/Projects/TourBooking/backend/.env/lib/python3.14/site-packages/daphne/server.py", "lineno": 166}

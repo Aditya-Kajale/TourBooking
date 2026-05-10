@@ -198,8 +198,8 @@ export function Signup() {
   };
 
   return (
-    <div className="min-h-screen h-screen overflow-hidden flex bg-background">
-      <div className="hidden lg:flex w-1/2 bg-primary relative items-center justify-center overflow-hidden">
+    <div className="h-screen w-full flex bg-background overflow-hidden">
+      <div className="hidden lg:flex w-1/2 h-full bg-primary relative items-center justify-center overflow-hidden">
         <img 
           src="https://images.unsplash.com/photo-1542332213-9b5a5a3fad35?auto=format&fit=crop&q=80&w=2000" 
           alt="Mountain Journey" 
@@ -212,14 +212,14 @@ export function Signup() {
       </div>
 
       {/* Right Signup Form Side */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 overflow-hidden">
-        <div className="w-full max-w-3xl overflow-hidden rounded-[2rem] border border-border/50 bg-card shadow-xl p-6 max-h-[calc(100vh-3rem)] lg:max-h-none">
+      <div className="w-full lg:w-1/2 h-full overflow-y-auto custom-scrollbar flex flex-col p-4 sm:p-8">
+        <div className="w-full max-w-2xl mx-auto my-auto rounded-[2rem] border border-border/50 bg-card shadow-xl p-6 sm:p-10">
           <div className="text-center lg:text-left mb-6">
             <h2 className="text-3xl font-extrabold tracking-tight text-foreground mb-2">Create an account</h2>
             <p className="text-muted-foreground">Join our community. Want to share tours? Apply to become a guide after signup.</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5 overflow-y-auto pr-1 pb-4 max-h-[calc(100vh-4rem)] lg:max-h-none">
+          <form onSubmit={handleSubmit} className="space-y-5">
             {error && (
               <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-2xl text-destructive font-medium text-sm">
                 {error}
