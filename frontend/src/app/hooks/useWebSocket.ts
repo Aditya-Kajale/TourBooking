@@ -1,6 +1,6 @@
-"""
+/*
 Custom React hook for WebSocket connections to real-time seat updates.
-"""
+*/
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 
