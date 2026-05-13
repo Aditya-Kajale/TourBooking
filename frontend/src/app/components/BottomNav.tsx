@@ -1,4 +1,4 @@
-import { Home, Calendar, PlusCircle, LayoutDashboard, User, Ticket } from 'lucide-react';
+import { Home, Calendar, PlusCircle, LayoutDashboard, User, Ticket, Shield } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ThemeToggle } from './ThemeToggle';
 
@@ -65,6 +65,18 @@ export function BottomNav() {
     <div className="md:hidden fixed bottom-6 left-0 right-0 z-[100] flex justify-center px-4 pointer-events-none">
       <div className="bg-card px-3 py-2 rounded-full flex items-center justify-around gap-1 shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-border pointer-events-auto max-w-full overflow-x-auto no-scrollbar">
         {mainNavItems.map(item => renderMobileItem(item))}
+
+        {/* Admin Mobile Item (admin only) */}
+        {user && user.is_admin && (
+          <button
+            onClick={() => navigate('/admin/dashboard')}
+            className="relative flex flex-col items-center justify-center transition-all duration-300 text-amber-500 hover:text-amber-400"
+          >
+            <div className="flex items-center justify-center w-12 h-12 rounded-full transition-all duration-300">
+               <Shield className="h-6 w-6" strokeWidth={2} />
+            </div>
+          </button>
+        )}
         
         {/* Profile Mobile Item */}
         <button

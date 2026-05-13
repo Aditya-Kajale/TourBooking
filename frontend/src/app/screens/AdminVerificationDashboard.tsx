@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Shield, Search, CheckCircle, XCircle, Clock, FileText, ChevronRight } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 interface GuideDocument {
   id: number;
@@ -26,10 +26,15 @@ export default function AdminVerificationDashboard() {
   const [selectedApp, setSelectedApp] = useState<GuideApplication | null>(null);
   const [loading, setLoading] = useState(true);
   const [reviewReason, setReviewReason] = useState('');
+  const navigate = useNavigate();
 
   useEffect(() => {
+    const raw = localStorage.getItem('user');
+    if (!raw) { navigate('/admin/login'); return; }
+    const parsed = JSON.parse(raw);
+    if (!parsed.is_admin) { navigate('/admin/login'); return; }
     fetchApplications();
-  }, []);
+  }, [navigate]);
 
   const fetchApplications = async () => {
     try {
@@ -114,7 +119,7 @@ export default function AdminVerificationDashboard() {
           <h1 className="text-xl font-bold tracking-wider">GuideVerify</h1>
         </div>
         <nav className="space-y-4">
-          <Link to="/admin" className="flex items-center space-x-3 text-gray-400 hover:text-green-400 transition-colors py-2">
+          <Link to="/admin/dashboard" className="flex items-center space-x-3 text-gray-400 hover:text-green-400 transition-colors py-2">
             <span>Dashboard</span>
           </Link>
           <div className="flex items-center space-x-3 text-white bg-green-900/40 p-3 rounded-xl border border-green-700/50">

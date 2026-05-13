@@ -82,6 +82,7 @@ export type User = {
   profile_pic?: string | null;
   email_verified?: boolean;
   is_guide?: boolean;
+  is_admin?: boolean;
   guide_verification_status?: 'not_requested' | 'pending' | 'approved' | 'rejected';
   two_fa_enabled?: boolean;
   csrfToken?: string;

@@ -60,6 +60,7 @@ def _user_payload(user, token_key: str, csrf_token: str) -> dict:
         'profile_pic': profile_pic_url,
         'email_verified': user.email_verified,
         'is_guide': getattr(user, 'is_guide', False),
+        'is_admin': user.is_staff,
         'guide_verification_status': getattr(user, 'guide_verification_status', 'not_requested'),
         'two_fa_enabled': two_fa_enabled,
         'csrfToken': csrf_token,

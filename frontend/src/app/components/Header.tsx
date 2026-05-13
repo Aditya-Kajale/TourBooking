@@ -1,4 +1,4 @@
-import { User } from 'lucide-react';
+import { User, Shield } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ThemeToggle } from './ThemeToggle';
 import { Home, Calendar, PlusCircle, LayoutDashboard, Ticket } from 'lucide-react';
@@ -64,6 +64,17 @@ export function Header() {
           
           <div className="flex items-center gap-2">
             <ThemeToggle />
+
+            {/* Admin Panel Button (admin only) */}
+            {user.is_admin && (
+              <button
+                onClick={() => navigate('/admin/dashboard')}
+                className="hidden md:flex items-center gap-2 px-3 md:px-4 py-2 md:py-2.5 rounded-full transition-all duration-300 font-medium text-sm text-amber-500 hover:bg-amber-500/10 hover:text-amber-400"
+              >
+                <Shield className="h-4 w-4" strokeWidth={2} />
+                <span className="hidden lg:block whitespace-nowrap">Admin</span>
+              </button>
+            )}
             
             {/* Desktop Profile Button */}
             <button

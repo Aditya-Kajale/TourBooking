@@ -11,7 +11,7 @@ export function Login() {
   const [sessionCode, setSessionCode] = useState('');
   const [userEmail, setUserEmail] = useState('');
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, refreshUser } = useAuth();
 
   const handleSubmit = async (e: any) => {
     e.preventDefault();
@@ -37,6 +37,7 @@ export function Login() {
         localStorage.setItem('user', JSON.stringify(data));
         if (data.csrfToken) localStorage.setItem('csrfToken', data.csrfToken);
         if (data.token) localStorage.setItem('token', data.token);
+        refreshUser();
         navigate('/home');
       } else {
         setError(data.detail || 'Login failed');
@@ -50,6 +51,7 @@ export function Login() {
     localStorage.setItem('user', JSON.stringify(user));
     if (user.csrfToken) localStorage.setItem('csrfToken', user.csrfToken);
     if (user.token) localStorage.setItem('token', user.token);
+    refreshUser();
     navigate('/home');
   };
 
@@ -139,6 +141,12 @@ export function Login() {
                   Create one now
                 </button>
               </p>
+            </div>
+
+            <div className="mt-4 text-center">
+              <button type="button" onClick={() => navigate('/admin/login')} className="text-xs text-muted-foreground/60 hover:text-primary transition-colors">
+                Admin Login →
+              </button>
             </div>
           </form>
         </div>

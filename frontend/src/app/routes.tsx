@@ -15,6 +15,8 @@ import { MyBookings } from './screens/MyBookings';
 import { ForgotPassword } from './screens/ForgotPassword';
 import { ResetPassword } from './screens/ResetPassword';
 import AdminVerificationDashboard from './screens/AdminVerificationDashboard';
+import { AdminLogin } from './screens/AdminLogin';
+import { AdminDashboard } from './screens/AdminDashboard';
 
 export const router = createBrowserRouter([
   {
@@ -38,5 +40,7 @@ export const router = createBrowserRouter([
   { path: 'verify-email', Component: VerifyEmail },
   { path: 'forgot-password', Component: ForgotPassword },
   { path: 'reset-password', Component: ResetPassword },
+  { path: 'admin/login', Component: AdminLogin },
+  { path: 'admin/dashboard', Component: AdminDashboard },
   { path: 'admin/verification', Component: AdminVerificationDashboard },
 ]);
